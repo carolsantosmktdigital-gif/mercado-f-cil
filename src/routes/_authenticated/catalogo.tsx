@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Search } from "lucide-react";
-import { Page, DemoBadge } from "@/components/AppShell";
+import { Page } from "@/components/AppShell";
 import { Input } from "@/components/ui/input";
 import { brl, SETORES, useDemo } from "@/lib/demo-store";
 
@@ -28,7 +28,6 @@ function Catalogo() {
 
   return (
     <Page title="Catálogo" subtitle={`${catalogo.length} produtos`}>
-      <DemoBadge />
       <div className="relative">
         <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         <Input className="h-14 rounded-2xl pl-12 text-base" placeholder="Pesquisar produto" value={busca} onChange={(e) => setBusca(e.target.value)} />

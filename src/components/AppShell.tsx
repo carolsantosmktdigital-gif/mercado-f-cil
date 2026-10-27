@@ -46,10 +46,10 @@ export function BottomNav() {
   );
 }
 
-export function DemoBadge() {
+export function DemoBadge({ texto = "Demonstração com dados fictícios — nada é salvo." }: { texto?: string }) {
   return (
     <p className="mb-4 rounded-xl bg-muted px-3 py-2 text-center text-xs text-muted-foreground">
-      Demonstração com dados fictícios — nada é salvo.
+      {texto}
     </p>
   );
 }

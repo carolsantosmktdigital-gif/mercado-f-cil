@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/lista")({
 });
 
 function Lista() {
-  const { itens, toggleItem, removeItem } = useDemo();
+  const { itens, toggleItem, removeItem, finalizarCompra } = useDemo();
   const total = itens.reduce((s, i) => s + totalItem(i), 0);
   const ordenados = [...itens].sort((a, b) => Number(a.comprado) - Number(b.comprado));
 
@@ -59,6 +59,9 @@ function Lista() {
         <span className="font-medium">Total da compra</span>
         <span className="font-display text-2xl font-extrabold">{brl(total)}</span>
       </div>
+      <Button size="lg" className="mt-4 h-14 w-full rounded-2xl text-base" onClick={() => finalizarCompra().catch(() => {})}>
+        Finalizar compra (itens marcados)
+      </Button>
     </Page>
   );
 }
