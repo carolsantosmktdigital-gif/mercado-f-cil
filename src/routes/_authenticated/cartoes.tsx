@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { brl, useDemo, type Cartao } from "@/lib/demo-store";
 
-export const Route = createFileRoute("/cartoes")({
+export const Route = createFileRoute("/_authenticated/cartoes")({
   head: () => ({
     meta: [
       { title: "Cartões — Mercado Fácil" },
@@ -47,7 +47,7 @@ function Cartoes() {
       subtitle={`${cartoes.length} cadastrados`}
       action={<Button size="icon" className="h-12 w-12 rounded-full" onClick={() => setAberto(!aberto)} aria-label="Novo cartão"><Plus className="h-6 w-6" /></Button>}
     >
-      <DemoBadge />
+      <DemoBadge texto="Cartões ainda são fictícios — não são salvos." />
       {aberto && (
         <form onSubmit={salvar} className="mb-6 space-y-4 rounded-3xl bg-card p-5 shadow-soft">
           <h2 className="text-lg font-bold">Novo cartão</h2>

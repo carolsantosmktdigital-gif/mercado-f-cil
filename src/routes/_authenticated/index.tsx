@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, ListChecks, Plus, ShoppingCart } from "lucide-react";
-import { Page, DemoBadge } from "@/components/AppShell";
+import { Page } from "@/components/AppShell";
 import { BudgetCard } from "@/components/BudgetCard";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { brl, useDemo } from "@/lib/demo-store";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Início — Mercado Fácil" },
@@ -18,15 +19,21 @@ export const Route = createFileRoute("/")({
 });
 
 function Inicio() {
-  const { cartoes, itens } = useDemo();
+  const { cartoes, itens, familia } = useDemo();
   const total = cartoes.reduce((s, c) => s + c.saldo, 0);
   const pendentes = itens.filter((i) => !i.comprado).length;
   return (
     <Page title="Mercado Fácil" subtitle="Olá! Boas compras 🛒">
-      <DemoBadge />
+      <section className="mb-4 flex items-center justify-between rounded-3xl bg-accent p-4 text-accent-foreground">
+        <div>
+          <p className="font-bold">{familia.nome}</p>
+          <p className="text-sm opacity-80">Código para convidar: <span className="font-mono font-bold">{familia.codigo}</span></p>
+        </div>
+        <Button variant="ghost" onClick={() => supabase.auth.signOut()}>Sair</Button>
+      </section>
       <section className="rounded-3xl bg-card p-5 shadow-soft">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">Saldo total nos cartões</p>
+          <p className="text-sm text-muted-foreground">Saldo total nos cartões (fictício)</p>
           <Link to="/cartoes" className="text-sm font-semibold text-primary">Ver todos</Link>
         </div>
         <p className="mt-1 font-display text-3xl font-extrabold">{brl(total)}</p>

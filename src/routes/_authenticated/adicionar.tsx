@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { brl, SETORES, useDemo, type Setor } from "@/lib/demo-store";
 
-export const Route = createFileRoute("/adicionar")({
+export const Route = createFileRoute("/_authenticated/adicionar")({
   validateSearch: (s: Record<string, unknown>): { inesperado?: boolean } =>
     s["inesperado"] === true || s["inesperado"] === "true" ? { inesperado: true } : {},
   head: () => ({
@@ -36,11 +36,11 @@ function Adicionar() {
   const p = parseFloat(preco.replace(",", ".")) || 0;
   const sugestoes = nome.length > 1 ? catalogo.filter((c) => c.nome.toLowerCase().includes(nome.toLowerCase())).slice(0, 3) : [];
 
-  function salvar(e: React.FormEvent) {
+  async function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (!nome.trim() || q <= 0) { toast.error("Informe nome e quantidade."); return; }
-    addItem({ nome: nome.trim(), setor, qtd: q, preco: p, inesperado: !!inesperado });
-    toast.success("Produto adicionado à lista (demonstração).");
+    try { await addItem({ nome: nome.trim(), setor, qtd: q, preco: p, inesperado: !!inesperado }); } catch { return; }
+    toast.success("Produto adicionado à lista ");
     navigate({ to: "/lista" });
   }
 
