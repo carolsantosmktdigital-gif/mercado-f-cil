@@ -8,6 +8,13 @@
       "when": 1793123548489,
       "tag": "0000_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793124765548,
+      "tag": "0001_familias_lista_catalogo_historico",
+      "breakpoints": true
     }
   ]
 }

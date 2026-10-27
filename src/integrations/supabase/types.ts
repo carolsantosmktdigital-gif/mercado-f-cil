@@ -14,6 +14,170 @@ export type Database = {
   }
   public: {
     Tables: {
+      compras: {
+        Row: {
+          cartao: string
+          created_at: string
+          data: string
+          familia_id: string
+          id: string
+          itens: number
+          total: number
+        }
+        Insert: {
+          cartao: string
+          created_at?: string
+          data?: string
+          familia_id: string
+          id?: string
+          itens?: number
+          total?: number
+        }
+        Update: {
+          cartao?: string
+          created_at?: string
+          data?: string
+          familia_id?: string
+          id?: string
+          itens?: number
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "familias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      familia_membros: {
+        Row: {
+          created_at: string
+          familia_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          familia_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          familia_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "familia_membros_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "familias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      familias: {
+        Row: {
+          codigo: string
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          codigo?: string
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      itens_lista: {
+        Row: {
+          comprado: boolean
+          created_at: string
+          familia_id: string
+          id: string
+          inesperado: boolean
+          nome: string
+          preco: number
+          qtd: number
+          setor: string
+        }
+        Insert: {
+          comprado?: boolean
+          created_at?: string
+          familia_id: string
+          id?: string
+          inesperado?: boolean
+          nome: string
+          preco?: number
+          qtd?: number
+          setor: string
+        }
+        Update: {
+          comprado?: boolean
+          created_at?: string
+          familia_id?: string
+          id?: string
+          inesperado?: boolean
+          nome?: string
+          preco?: number
+          qtd?: number
+          setor?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_lista_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "familias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produtos: {
+        Row: {
+          created_at: string
+          familia_id: string
+          id: string
+          nome: string
+          preco_ref: number
+          setor: string
+        }
+        Insert: {
+          created_at?: string
+          familia_id: string
+          id?: string
+          nome: string
+          preco_ref?: number
+          setor: string
+        }
+        Update: {
+          created_at?: string
+          familia_id?: string
+          id?: string
+          nome?: string
+          preco_ref?: number
+          setor?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produtos_familia_id_fkey"
+            columns: ["familia_id"]
+            isOneToOne: false
+            referencedRelation: "familias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shopping_items: {
         Row: {
           checked: boolean
@@ -46,7 +210,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      criar_familia: { Args: { _nome: string }; Returns: string }
+      e_membro: { Args: { _familia: string }; Returns: boolean }
+      entrar_familia: { Args: { _codigo: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
