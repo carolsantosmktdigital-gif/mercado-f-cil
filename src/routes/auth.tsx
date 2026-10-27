@@ -40,7 +40,7 @@ function AuthPage() {
     if (mode === "in") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
-      if (error) return toast.error("E-mail ou senha incorretos.");
+      if (error) { toast.error("E-mail ou senha incorretos."); return; }
       navigate({ to: "/lista" });
     } else {
       const { error } = await supabase.auth.signUp({
@@ -49,23 +49,23 @@ function AuthPage() {
         options: { emailRedirectTo: window.location.origin + "/lista" },
       });
       setLoading(false);
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message); return; }
       toast.success("Conta criada! Confira seu e-mail para confirmar.");
     }
   }
 
   async function forgot() {
-    if (!email) return toast.error("Digite seu e-mail primeiro.");
+    if (!email) { toast.error("Digite seu e-mail primeiro."); return; }
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + "/reset-password",
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Enviamos um link para redefinir a senha.");
   }
 
   async function social(provider: "google" | "lovable") {
     const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin + "/auth" });
-    if (result.error) return toast.error("Não foi possível entrar.");
+    if (result.error) { toast.error("Não foi possível entrar."); return; }
     if (result.redirected) return;
     navigate({ to: "/lista" });
   }
