@@ -3,7 +3,7 @@ import { CalendarDays, CreditCard } from "lucide-react";
 import { Page, DemoBadge } from "@/components/AppShell";
 import { brl, useDemo } from "@/lib/demo-store";
 
-export const Route = createFileRoute("/historico")({
+export const Route = createFileRoute("/_authenticated/historico")({
   head: () => ({
     meta: [
       { title: "Histórico — Mercado Fácil" },

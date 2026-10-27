@@ -5,7 +5,7 @@ import { BudgetCard } from "@/components/BudgetCard";
 import { Button } from "@/components/ui/button";
 import { brl, useDemo } from "@/lib/demo-store";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Início — Mercado Fácil" },

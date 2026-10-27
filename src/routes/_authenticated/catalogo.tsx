@@ -5,7 +5,7 @@ import { Page, DemoBadge } from "@/components/AppShell";
 import { Input } from "@/components/ui/input";
 import { brl, SETORES, useDemo } from "@/lib/demo-store";
 
-export const Route = createFileRoute("/catalogo")({
+export const Route = createFileRoute("/_authenticated/catalogo")({
   head: () => ({
     meta: [
       { title: "Catálogo — Mercado Fácil" },

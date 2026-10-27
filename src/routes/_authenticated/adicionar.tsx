@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { brl, SETORES, useDemo, type Setor } from "@/lib/demo-store";
 
-export const Route = createFileRoute("/adicionar")({
+export const Route = createFileRoute("/_authenticated/adicionar")({
   validateSearch: (s: Record<string, unknown>): { inesperado?: boolean } =>
     s["inesperado"] === true || s["inesperado"] === "true" ? { inesperado: true } : {},
   head: () => ({
