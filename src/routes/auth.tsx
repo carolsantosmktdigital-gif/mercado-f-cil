@@ -32,20 +32,20 @@ function Auth() {
     if (modo === "entrar") {
       const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
       setBusy(false);
-      if (error) return toast.error("E-mail ou senha incorretos.");
+      if (error) { toast.error("E-mail ou senha incorretos."); return; }
       navigate({ to: "/" });
     } else {
       const { error } = await supabase.auth.signUp({ email, password: senha, options: { emailRedirectTo: window.location.origin } });
       setBusy(false);
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message); return; }
       toast.success("Conta criada! Confirme pelo link enviado ao seu e-mail.");
     }
   }
 
   async function esqueci() {
-    if (!email) return toast.error("Digite seu e-mail primeiro.");
+    if (!email) { toast.error("Digite seu e-mail primeiro."); return; }
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Enviamos um link para redefinir a senha.");
   }
 
