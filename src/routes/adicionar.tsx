@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { brl, SETORES, useDemo, type Setor } from "@/lib/demo-store";
 
 export const Route = createFileRoute("/adicionar")({
-  validateSearch: (s: Record<string, unknown>) => ({ inesperado: s.inesperado === true || s.inesperado === "true" ? true : undefined }),
+  validateSearch: (s: Record<string, unknown>): { inesperado?: boolean } =>
+    s["inesperado"] === true || s["inesperado"] === "true" ? { inesperado: true } : {},
   head: () => ({
     meta: [
       { title: "Adicionar produto — Mercado Fácil" },
@@ -38,7 +39,7 @@ function Adicionar() {
   function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (!nome.trim() || q <= 0) { toast.error("Informe nome e quantidade."); return; }
-    addItem({ nome: nome.trim(), setor, qtd: q, preco: p, inesperado });
+    addItem({ nome: nome.trim(), setor, qtd: q, preco: p, inesperado: !!inesperado });
     toast.success("Produto adicionado à lista (demonstração).");
     navigate({ to: "/lista" });
   }
