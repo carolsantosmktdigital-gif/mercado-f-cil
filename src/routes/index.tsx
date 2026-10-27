@@ -1,52 +1,64 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ShoppingBasket, Check, Smartphone } from "lucide-react";
+import { ChevronRight, ListChecks, Plus, ShoppingCart } from "lucide-react";
+import { Page, DemoBadge } from "@/components/AppShell";
+import { BudgetCard } from "@/components/BudgetCard";
 import { Button } from "@/components/ui/button";
+import { brl, useDemo } from "@/lib/demo-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MercadoFácil — sua lista de compras" },
-      { name: "description", content: "Monte sua lista de compras, marque o que já pegou e não esqueça nada no mercado." },
-      { property: "og:title", content: "MercadoFácil — sua lista de compras" },
-      { property: "og:description", content: "Monte sua lista de compras e não esqueça nada no mercado." },
+      { title: "Início — Mercado Fácil" },
+      { name: "description", content: "Resumo dos seus cartões, saldos e da compra em andamento." },
+      { property: "og:title", content: "Mercado Fácil" },
+      { property: "og:description", content: "Organize compras de supermercado com cartões de alimentação." },
     ],
   }),
-  component: Index,
+  component: Inicio,
 });
 
-function Index() {
+function Inicio() {
+  const { cartoes, itens } = useDemo();
+  const total = cartoes.reduce((s, c) => s + c.saldo, 0);
+  const pendentes = itens.filter((i) => !i.comprado).length;
   return (
-    <main className="min-h-screen px-6 py-10">
-      <header className="mx-auto flex max-w-5xl items-center justify-between">
-        <span className="flex items-center gap-2 font-display text-xl font-extrabold text-primary">
-          <ShoppingBasket className="h-6 w-6" /> MercadoFácil
-        </span>
-        <Button asChild variant="ghost"><Link to="/auth">Entrar</Link></Button>
-      </header>
-      <section className="mx-auto mt-20 max-w-3xl text-center">
-        <h1 className="text-5xl font-extrabold leading-tight md:text-7xl">
-          Compras sem <span className="text-accent">esquecer</span> nada.
-        </h1>
-        <p className="mx-auto mt-6 max-w-xl text-lg text-muted-foreground">
-          Anote o que precisa, marque o que já está no carrinho e chegue em casa com tudo.
-        </p>
-        <Button asChild size="lg" className="mt-10 rounded-full px-8 shadow-soft">
-          <Link to="/lista">Começar minha lista</Link>
-        </Button>
+    <Page title="Mercado Fácil" subtitle="Olá! Boas compras 🛒">
+      <DemoBadge />
+      <section className="rounded-3xl bg-card p-5 shadow-soft">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Saldo total nos cartões</p>
+          <Link to="/cartoes" className="text-sm font-semibold text-primary">Ver todos</Link>
+        </div>
+        <p className="mt-1 font-display text-3xl font-extrabold">{brl(total)}</p>
+        <ul className="mt-4 space-y-2">
+          {cartoes.map((c) => (
+            <li key={c.id} className="flex justify-between rounded-2xl bg-muted px-4 py-3">
+              <span className="font-medium">{c.nome}</span>
+              <span className="font-semibold text-primary">{brl(c.saldo)}</span>
+            </li>
+          ))}
+        </ul>
       </section>
-      <section className="mx-auto mt-20 grid max-w-3xl gap-4 md:grid-cols-3">
-        {[
-          { icon: ShoppingBasket, t: "Adicione itens", d: "Nome e quantidade em segundos." },
-          { icon: Check, t: "Marque no mercado", d: "Risque o que já pegou." },
-          { icon: Smartphone, t: "Em qualquer lugar", d: "Sua lista salva na sua conta." },
-        ].map(({ icon: Icon, t, d }) => (
-          <div key={t} className="rounded-2xl bg-card p-6 shadow-soft">
-            <Icon className="h-6 w-6 text-primary" />
-            <h3 className="mt-3 font-bold">{t}</h3>
-            <p className="text-sm text-muted-foreground">{d}</p>
-          </div>
-        ))}
-      </section>
-    </main>
+
+      <h2 className="mb-3 mt-8 flex items-center gap-2 text-xl font-bold"><ShoppingCart className="h-5 w-5" /> Compra em andamento</h2>
+      <BudgetCard />
+
+      <h2 className="mb-3 mt-8 text-xl font-bold">Acesso rápido</h2>
+      <div className="grid grid-cols-2 gap-3">
+        <Link to="/lista" className="rounded-3xl bg-card p-5 shadow-soft">
+          <ListChecks className="h-7 w-7 text-primary" />
+          <p className="mt-3 font-bold">Lista da semana</p>
+          <p className="text-sm text-muted-foreground">{pendentes} itens a pegar</p>
+        </Link>
+        <Link to="/adicionar" className="rounded-3xl bg-accent p-5 text-accent-foreground">
+          <Plus className="h-7 w-7" />
+          <p className="mt-3 font-bold">Adicionar produto</p>
+          <p className="text-sm opacity-80">Na lista e no catálogo</p>
+        </Link>
+      </div>
+      <Button asChild size="lg" className="mt-6 h-14 w-full rounded-2xl text-base">
+        <Link to="/lista">Continuar compra <ChevronRight className="h-5 w-5" /></Link>
+      </Button>
+    </Page>
   );
 }
