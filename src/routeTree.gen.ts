@@ -9,148 +9,148 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdicionarRouteImport } from './routes/adicionar'
-import { Route as CartoesRouteImport } from './routes/cartoes'
-import { Route as CatalogoRouteImport } from './routes/catalogo'
-import { Route as HistoricoRouteImport } from './routes/historico'
-import { Route as ListaRouteImport } from './routes/lista'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedAdicionarRouteImport } from './routes/_authenticated/adicionar'
+import { Route as AuthenticatedCartoesRouteImport } from './routes/_authenticated/cartoes'
+import { Route as AuthenticatedCatalogoRouteImport } from './routes/_authenticated/catalogo'
+import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated/historico'
+import { Route as AuthenticatedListaRouteImport } from './routes/_authenticated/lista'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/_authenticated/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdicionarRoute = AdicionarRouteImport.update({
-  id: '/adicionar',
+const AuthenticatedAdicionarRoute = AuthenticatedAdicionarRouteImport.update({
+  id: '/_authenticated/adicionar',
   path: '/adicionar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CartoesRoute = CartoesRouteImport.update({
-  id: '/cartoes',
+const AuthenticatedCartoesRoute = AuthenticatedCartoesRouteImport.update({
+  id: '/_authenticated/cartoes',
   path: '/cartoes',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CatalogoRoute = CatalogoRouteImport.update({
-  id: '/catalogo',
+const AuthenticatedCatalogoRoute = AuthenticatedCatalogoRouteImport.update({
+  id: '/_authenticated/catalogo',
   path: '/catalogo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HistoricoRoute = HistoricoRouteImport.update({
-  id: '/historico',
+const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
+  id: '/_authenticated/historico',
   path: '/historico',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ListaRoute = ListaRouteImport.update({
-  id: '/lista',
+const AuthenticatedListaRoute = AuthenticatedListaRouteImport.update({
+  id: '/_authenticated/lista',
   path: '/lista',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/adicionar': typeof AdicionarRoute
-  '/cartoes': typeof CartoesRoute
-  '/catalogo': typeof CatalogoRoute
-  '/historico': typeof HistoricoRoute
-  '/lista': typeof ListaRoute
+  '/adicionar': typeof AuthenticatedAdicionarRoute
+  '/cartoes': typeof AuthenticatedCartoesRoute
+  '/catalogo': typeof AuthenticatedCatalogoRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
+  '/lista': typeof AuthenticatedListaRoute
+  '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/adicionar': typeof AdicionarRoute
-  '/cartoes': typeof CartoesRoute
-  '/catalogo': typeof CatalogoRoute
-  '/historico': typeof HistoricoRoute
-  '/lista': typeof ListaRoute
+  '/adicionar': typeof AuthenticatedAdicionarRoute
+  '/cartoes': typeof AuthenticatedCartoesRoute
+  '/catalogo': typeof AuthenticatedCatalogoRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
+  '/lista': typeof AuthenticatedListaRoute
+  '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/adicionar': typeof AdicionarRoute
-  '/cartoes': typeof CartoesRoute
-  '/catalogo': typeof CatalogoRoute
-  '/historico': typeof HistoricoRoute
-  '/lista': typeof ListaRoute
+  '/_authenticated/adicionar': typeof AuthenticatedAdicionarRoute
+  '/_authenticated/cartoes': typeof AuthenticatedCartoesRoute
+  '/_authenticated/catalogo': typeof AuthenticatedCatalogoRoute
+  '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
+  '/_authenticated/lista': typeof AuthenticatedListaRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/adicionar' | '/cartoes' | '/catalogo' | '/historico' | '/lista'
+    '/adicionar' | '/cartoes' | '/catalogo' | '/historico' | '/lista' | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/adicionar' | '/cartoes' | '/catalogo' | '/historico' | '/lista'
+  to: '/adicionar' | '/cartoes' | '/catalogo' | '/historico' | '/lista' | '/'
   id:
     | '__root__'
-    | '/'
-    | '/adicionar'
-    | '/cartoes'
-    | '/catalogo'
-    | '/historico'
-    | '/lista'
+    | '/_authenticated/adicionar'
+    | '/_authenticated/cartoes'
+    | '/_authenticated/catalogo'
+    | '/_authenticated/historico'
+    | '/_authenticated/lista'
+    | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AdicionarRoute: typeof AdicionarRoute
-  CartoesRoute: typeof CartoesRoute
-  CatalogoRoute: typeof CatalogoRoute
-  HistoricoRoute: typeof HistoricoRoute
-  ListaRoute: typeof ListaRoute
+  AuthenticatedAdicionarRoute: typeof AuthenticatedAdicionarRoute
+  AuthenticatedCartoesRoute: typeof AuthenticatedCartoesRoute
+  AuthenticatedCatalogoRoute: typeof AuthenticatedCatalogoRoute
+  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
+  AuthenticatedListaRoute: typeof AuthenticatedListaRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/adicionar': {
-      id: '/adicionar'
+    '/_authenticated/adicionar': {
+      id: '/_authenticated/adicionar'
       path: '/adicionar'
       fullPath: '/adicionar'
-      preLoaderRoute: typeof AdicionarRouteImport
+      preLoaderRoute: typeof AuthenticatedAdicionarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/cartoes': {
-      id: '/cartoes'
+    '/_authenticated/cartoes': {
+      id: '/_authenticated/cartoes'
       path: '/cartoes'
       fullPath: '/cartoes'
-      preLoaderRoute: typeof CartoesRouteImport
+      preLoaderRoute: typeof AuthenticatedCartoesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/catalogo': {
-      id: '/catalogo'
+    '/_authenticated/catalogo': {
+      id: '/_authenticated/catalogo'
       path: '/catalogo'
       fullPath: '/catalogo'
-      preLoaderRoute: typeof CatalogoRouteImport
+      preLoaderRoute: typeof AuthenticatedCatalogoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/historico': {
-      id: '/historico'
+    '/_authenticated/historico': {
+      id: '/_authenticated/historico'
       path: '/historico'
       fullPath: '/historico'
-      preLoaderRoute: typeof HistoricoRouteImport
+      preLoaderRoute: typeof AuthenticatedHistoricoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lista': {
-      id: '/lista'
+    '/_authenticated/lista': {
+      id: '/_authenticated/lista'
       path: '/lista'
       fullPath: '/lista'
-      preLoaderRoute: typeof ListaRouteImport
+      preLoaderRoute: typeof AuthenticatedListaRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AdicionarRoute: AdicionarRoute,
-  CartoesRoute: CartoesRoute,
-  CatalogoRoute: CatalogoRoute,
-  HistoricoRoute: HistoricoRoute,
-  ListaRoute: ListaRoute,
+  AuthenticatedAdicionarRoute: AuthenticatedAdicionarRoute,
+  AuthenticatedCartoesRoute: AuthenticatedCartoesRoute,
+  AuthenticatedCatalogoRoute: AuthenticatedCatalogoRoute,
+  AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
+  AuthenticatedListaRoute: AuthenticatedListaRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
