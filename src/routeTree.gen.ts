@@ -10,75 +10,91 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as AuthenticatedListaRouteImport } from './routes/_authenticated/lista'
+import { Route as AdicionarRouteImport } from './routes/adicionar'
+import { Route as CartoesRouteImport } from './routes/cartoes'
+import { Route as CatalogoRouteImport } from './routes/catalogo'
+import { Route as HistoricoRouteImport } from './routes/historico'
+import { Route as ListaRouteImport } from './routes/lista'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const AdicionarRoute = AdicionarRouteImport.update({
+  id: '/adicionar',
+  path: '/adicionar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const CartoesRoute = CartoesRouteImport.update({
+  id: '/cartoes',
+  path: '/cartoes',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+const CatalogoRoute = CatalogoRouteImport.update({
+  id: '/catalogo',
+  path: '/catalogo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedListaRoute = AuthenticatedListaRouteImport.update({
+const HistoricoRoute = HistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListaRoute = ListaRouteImport.update({
   id: '/lista',
   path: '/lista',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/lista': typeof AuthenticatedListaRoute
+  '/adicionar': typeof AdicionarRoute
+  '/cartoes': typeof CartoesRoute
+  '/catalogo': typeof CatalogoRoute
+  '/historico': typeof HistoricoRoute
+  '/lista': typeof ListaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/lista': typeof AuthenticatedListaRoute
+  '/adicionar': typeof AdicionarRoute
+  '/cartoes': typeof CartoesRoute
+  '/catalogo': typeof CatalogoRoute
+  '/historico': typeof HistoricoRoute
+  '/lista': typeof ListaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
-  '/auth': typeof AuthRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/_authenticated/lista': typeof AuthenticatedListaRoute
+  '/adicionar': typeof AdicionarRoute
+  '/cartoes': typeof CartoesRoute
+  '/catalogo': typeof CatalogoRoute
+  '/historico': typeof HistoricoRoute
+  '/lista': typeof ListaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/reset-password' | '/lista'
+  fullPaths:
+    '/' | '/adicionar' | '/cartoes' | '/catalogo' | '/historico' | '/lista'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/reset-password' | '/lista'
+  to: '/' | '/adicionar' | '/cartoes' | '/catalogo' | '/historico' | '/lista'
   id:
     | '__root__'
     | '/'
-    | '/_authenticated'
-    | '/auth'
-    | '/reset-password'
-    | '/_authenticated/lista'
+    | '/adicionar'
+    | '/cartoes'
+    | '/catalogo'
+    | '/historico'
+    | '/lista'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  AuthRoute: typeof AuthRoute
-  ResetPasswordRoute: typeof ResetPasswordRoute
+  AdicionarRoute: typeof AdicionarRoute
+  CartoesRoute: typeof CartoesRoute
+  CatalogoRoute: typeof CatalogoRoute
+  HistoricoRoute: typeof HistoricoRoute
+  ListaRoute: typeof ListaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -90,53 +106,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+    '/adicionar': {
+      id: '/adicionar'
+      path: '/adicionar'
+      fullPath: '/adicionar'
+      preLoaderRoute: typeof AdicionarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/cartoes': {
+      id: '/cartoes'
+      path: '/cartoes'
+      fullPath: '/cartoes'
+      preLoaderRoute: typeof CartoesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
+    '/catalogo': {
+      id: '/catalogo'
+      path: '/catalogo'
+      fullPath: '/catalogo'
+      preLoaderRoute: typeof CatalogoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/lista': {
-      id: '/_authenticated/lista'
+    '/historico': {
+      id: '/historico'
+      path: '/historico'
+      fullPath: '/historico'
+      preLoaderRoute: typeof HistoricoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lista': {
+      id: '/lista'
       path: '/lista'
       fullPath: '/lista'
-      preLoaderRoute: typeof AuthenticatedListaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      preLoaderRoute: typeof ListaRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
 
-interface AuthenticatedRouteRouteChildren {
-  AuthenticatedListaRoute: typeof AuthenticatedListaRoute
-}
-
-const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedListaRoute: AuthenticatedListaRoute,
-}
-
-const AuthenticatedRouteRouteWithChildren =
-  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  AuthRoute: AuthRoute,
-  ResetPasswordRoute: ResetPasswordRoute,
+  AdicionarRoute: AdicionarRoute,
+  CartoesRoute: CartoesRoute,
+  CatalogoRoute: CatalogoRoute,
+  HistoricoRoute: HistoricoRoute,
+  ListaRoute: ListaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

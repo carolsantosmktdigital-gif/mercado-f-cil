@@ -28,6 +28,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -35,24 +37,26 @@
 
 :root {
   --radius: 1rem;
-  --background: oklch(0.975 0.015 95);
+  --background: oklch(0.98 0.005 150);
   --foreground: oklch(0.25 0.05 150);
-  --card: oklch(0.995 0.008 95);
+  --card: oklch(1 0 0);
   --card-foreground: oklch(0.25 0.05 150);
   --popover: oklch(0.995 0.008 95);
   --popover-foreground: oklch(0.25 0.05 150);
   --primary: oklch(0.45 0.12 150);
-  --primary-foreground: oklch(0.98 0.02 95);
+  --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.92 0.05 130);
   --secondary-foreground: oklch(0.3 0.08 150);
-  --muted: oklch(0.94 0.02 95);
+  --muted: oklch(0.955 0.006 150);
   --muted-foreground: oklch(0.5 0.03 150);
-  --accent: oklch(0.68 0.19 35);
-  --accent-foreground: oklch(0.99 0.01 95);
+  --accent: oklch(0.93 0.05 150);
+  --accent-foreground: oklch(0.3 0.08 150);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.88 0.03 110);
-  --input: oklch(0.88 0.03 110);
+  --warning: oklch(0.85 0.16 85);
+  --warning-foreground: oklch(0.3 0.08 60);
+  --border: oklch(0.9 0.01 150);
+  --input: oklch(0.9 0.01 150);
   --ring: oklch(0.45 0.12 150);
   --shadow-soft: 0 12px 30px -14px color-mix(in oklab, var(--primary) 40%, transparent);
 }
