@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { CreditCard, Plus } from "lucide-react";
-import { Page, DemoBadge } from "@/components/AppShell";
+import { Page } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,13 +32,13 @@ function Cartoes() {
   const [nome, setNome] = useState("");
   const [saldo, setSaldo] = useState("");
 
-  function salvar(e: React.FormEvent) {
+  async function salvar(e: React.FormEvent) {
     e.preventDefault();
     const v = parseFloat(saldo.replace(",", "."));
     if (!nome.trim() || isNaN(v)) { toast.error("Preencha nome e saldo."); return; }
-    addCartao(nome.trim(), v);
+    try { await addCartao(nome.trim(), v); } catch { return; }
     setNome(""); setSaldo(""); setAberto(false);
-    toast.success("Cartão adicionado (demonstração).");
+    toast.success("Cartão salvo.");
   }
 
   return (
@@ -47,7 +47,7 @@ function Cartoes() {
       subtitle={`${cartoes.length} cadastrados`}
       action={<Button size="icon" className="h-12 w-12 rounded-full" onClick={() => setAberto(!aberto)} aria-label="Novo cartão"><Plus className="h-6 w-6" /></Button>}
     >
-      <DemoBadge texto="Cartões ainda são fictícios — não são salvos." />
+
       {aberto && (
         <form onSubmit={salvar} className="mb-6 space-y-4 rounded-3xl bg-card p-5 shadow-soft">
           <h2 className="text-lg font-bold">Novo cartão</h2>
