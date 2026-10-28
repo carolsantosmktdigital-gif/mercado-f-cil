@@ -27,25 +27,38 @@ const estilo: Record<Cartao["cor"], string> = {
 };
 
 function Cartoes() {
-  const { cartoes, addCartao } = useDemo();
+  const { cartoes, listas, addCartao, salvarCartao } = useDemo();
   const [aberto, setAberto] = useState(false);
   const [editando, setEditando] = useState<Cartao | null>(null);
   const [novoSaldo, setNovoSaldo] = useState("");
+  const [novoDestinado, setNovoDestinado] = useState("");
   const [novoNome, setNovoNome] = useState("");
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   const [nome, setNome] = useState("");
   const [saldo, setSaldo] = useState("");
+  const [destinado, setDestinado] = useState("");
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     const v = parseFloat(saldo.replace(",", "."));
     if (!nome.trim() || isNaN(v)) { toast.error("Preencha nome e saldo."); return; }
-    try { await addCartao(nome.trim(), v); } catch { return; }
-    setNome(""); setSaldo(""); setAberto(false);
+    const d = Number(destinado.replace(",", "."));
+    if (!Number.isFinite(d) || d < 0 || d > v) {toast.error("O valor destinado deve estar entre zero e o saldo do cartão.");return;}
+    try { await addCartao(nome.trim(), v, d); } catch (error) {toast.error(error instanceof Error ? error.message : "Não foi possível cadastrar.");return; }
+    setNome(""); setSaldo(""); setDestinado(""); setAberto(false);
     toast.success("Cartão salvo.");
   }
 
-  async function salvarEdicao(e: React.FormEvent) {e.preventDefault();if(!editando)return;const valor=Number(novoSaldo.trim().replace(",","."));if(!novoNome.trim()||!Number.isFinite(valor)||valor<0){toast.error("Informe nome e saldo válidos.");return;}setSalvandoEdicao(true);try{const {supabase}=await import("@/integrations/supabase/client");const {error}=await (supabase as any).from("cartoes").update({nome:novoNome.trim(),saldo:valor}).eq("id",editando.id);if(error)throw error;toast.success("Cartão atualizado.");setEditando(null);window.location.reload();}catch{toast.error("Não foi possível atualizar o cartão.");}finally{setSalvandoEdicao(false);}}
+  async function salvarEdicao(e: React.FormEvent) {
+    e.preventDefault();if(!editando)return;
+    const valor=Number(novoSaldo.trim().replace(",","."));
+    const d=Number(novoDestinado.trim().replace(",","."));
+    if(!novoNome.trim()||!Number.isFinite(valor)||valor<0||!Number.isFinite(d)||d<0||d>valor){toast.error("O valor destinado às compras não pode ultrapassar o saldo.");return;}
+    setSalvandoEdicao(true);
+    try{await salvarCartao(editando.id,novoNome,valor,d);toast.success("Cartão e orçamento atualizados.");setEditando(null);}
+    catch(error){toast.error(error instanceof Error?error.message:"Não foi possível atualizar o cartão.");}
+    finally{setSalvandoEdicao(false);}
+  }
 
   return (
     <Page
@@ -58,17 +71,17 @@ function Cartoes() {
         <form onSubmit={salvar} className="mb-6 space-y-4 rounded-3xl bg-card p-5 shadow-soft">
           <h2 className="text-lg font-bold">Novo cartão</h2>
           <div className="space-y-1"><Label>Nome do cartão</Label><Input className="h-12" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Vale-alimentação" /></div>
-          <div className="space-y-1"><Label>Saldo disponível (R$)</Label><Input className="h-12" inputMode="decimal" value={saldo} onChange={(e) => setSaldo(e.target.value)} placeholder="0,00" /></div>
+          <div className="space-y-1"><Label>Saldo disponível (R$)</Label><Input className="h-12" inputMode="decimal" value={saldo} onChange={(e) => setSaldo(e.target.value)} placeholder="0,00" /></div><div className="space-y-1"><Label>Valor destinado às compras (R$)</Label><Input className="h-12" inputMode="decimal" value={destinado} onChange={e=>setDestinado(e.target.value)} placeholder="Ex.: 500,00" /><p className="text-xs text-muted-foreground">Este valor será o orçamento da compra mensal.</p></div>
           <Button type="submit" size="lg" className="h-12 w-full rounded-2xl">Salvar cartão</Button>
         </form>
       )}
-      {editando && <form onSubmit={salvarEdicao} className="mb-5 space-y-3 rounded-3xl border bg-card p-5 shadow-soft"><h2 className="font-bold">Editar cartão</h2><Label>Nome do cartão</Label><Input className="h-12" value={novoNome} onChange={e=>setNovoNome(e.target.value)} required/><Label>Saldo disponível (R$)</Label><Input className="h-12" inputMode="decimal" value={novoSaldo} onFocus={e=>e.currentTarget.select()} onChange={e=>setNovoSaldo(e.target.value)} required/><div className="flex gap-2"><Button type="submit" disabled={salvandoEdicao} className="flex-1">Salvar alterações</Button><Button type="button" variant="outline" onClick={()=>setEditando(null)}>Cancelar</Button></div></form>}
+      {editando && <form onSubmit={salvarEdicao} className="mb-5 space-y-3 rounded-3xl border bg-card p-5 shadow-soft"><h2 className="font-bold">Editar cartão</h2><Label>Nome do cartão</Label><Input className="h-12" value={novoNome} onChange={e=>setNovoNome(e.target.value)} required/><Label>Saldo disponível (R$)</Label><Input className="h-12" inputMode="decimal" value={novoSaldo} onFocus={e=>e.currentTarget.select()} onChange={e=>setNovoSaldo(e.target.value)} required/><Label>Valor destinado às compras (R$)</Label><Input className="h-12" inputMode="decimal" value={novoDestinado} onFocus={e=>e.currentTarget.select()} onChange={e=>setNovoDestinado(e.target.value)} required/><p className="text-xs text-muted-foreground">Este valor aparece no card Saldo do orçamento.</p><div className="flex gap-2"><Button type="submit" disabled={salvandoEdicao} className="flex-1">Salvar alterações</Button><Button type="button" variant="outline" onClick={()=>setEditando(null)}>Cancelar</Button></div></form>}
       <ul className="space-y-4">
         {cartoes.map((c) => (
           <li key={c.id} className={`rounded-3xl p-5 shadow-soft ${estilo[c.cor]}`}>
             <div className="flex items-center justify-between">
               <span className="font-semibold">{c.nome}</span>
-              <div className="flex items-center gap-2"><button type="button" className="rounded-lg p-2" aria-label={"Editar saldo de "+c.nome} onClick={()=>{setEditando(c);setNovoNome(c.nome);setNovoSaldo(String(c.saldo));}}><Pencil className="h-5 w-5"/></button><CreditCard className="h-6 w-6 opacity-80" /></div>
+              <div className="flex items-center gap-2"><button type="button" className="rounded-lg p-2" aria-label={"Editar saldo de "+c.nome} onClick={()=>{setEditando(c);setNovoNome(c.nome);setNovoSaldo(String(c.saldo));setNovoDestinado(String(listas.find(l=>l.cartao_id===c.id&&l.tipo==="normal")?.orcamento||0));}}><Pencil className="h-5 w-5"/></button><CreditCard className="h-6 w-6 opacity-80" /></div>
             </div>
             <p className="mt-6 text-sm opacity-75">Saldo disponível</p>
             <p className="font-display text-3xl font-extrabold">{brl(c.saldo)}</p>
