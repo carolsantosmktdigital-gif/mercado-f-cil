@@ -33,7 +33,7 @@ function Inicio() {
       </section>
       <section className="rounded-3xl bg-card p-5 shadow-soft">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">Saldo total nos cartões (fictício)</p>
+          <p className="text-sm text-muted-foreground">Saldo total nos cartões</p>
           <Link to="/cartoes" className="text-sm font-semibold text-primary">Ver todos</Link>
         </div>
         <p className="mt-1 font-display text-3xl font-extrabold">{brl(total)}</p>
@@ -54,7 +54,7 @@ function Inicio() {
       <div className="grid grid-cols-2 gap-3">
         <Link to="/lista" className="rounded-3xl bg-card p-5 shadow-soft">
           <ListChecks className="h-7 w-7 text-primary" />
-          <p className="mt-3 font-bold">Lista da semana</p>
+          <p className="mt-3 font-bold">Lista de compras</p>
           <p className="text-sm text-muted-foreground">{pendentes} itens a pegar</p>
         </Link>
         <Link to="/adicionar" className="rounded-3xl bg-accent p-5 text-accent-foreground">
