@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, Plus, Trash2, Zap, Pencil, Search, ShoppingCart } from "lucide-react";
+import { Check, Plus, Trash2, Zap, Pencil, Search, ShoppingCart, ChevronDown, ChevronUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ function Lista() {
   const { itens, toggleItem, updateItem, removeItem, finalizarCompra, listas, listaId, selecionarLista, criarLista, cartoes, importarListaPadrao } = useDemo();
   const [aba, setAba] = useState<"lista"|"carrinho">("lista");
   const [busca, setBusca] = useState("");
+  const [recolhidos, setRecolhidos] = useState<string[]>([]);
   const [setorFiltro, setSetorFiltro] = useState("Todos");
   const [editando, setEditando] = useState<string | null>(null);
   const [edicao, setEdicao] = useState({nome:"",setor:"Mercearia"});
@@ -53,7 +54,7 @@ function Lista() {
   function campo(i:(typeof itens)[number], tipo:"qtd"|"preco") {
     const atual = tipo==="qtd" ? String(i.qtd) : (i.preco ? String(i.preco) : "");
     return <Input aria-label={(tipo==="qtd"?"Quantidade de ":"Preço de ")+i.nome}
-      className="h-11 w-full min-w-0 rounded-xl text-base" type="text" inputMode="decimal"
+      className="h-10 w-full min-w-0 rounded-lg px-2 text-base tabular-nums" type="text" inputMode="decimal"
       placeholder={tipo==="preco"?"R$ 0,00":"Quantidade"}
       value={rascunhos[i.id]?.[tipo]??atual}
       onFocus={e=>e.currentTarget.select()}
@@ -64,13 +65,16 @@ function Lista() {
   }
   const setores = ["Todos",...Array.from(new Set(itens.map(i=>i.setor)))];
   const visiveis = (aba==="lista"?pendentes:carrinho).filter(i=>(setorFiltro==="Todos"||i.setor===setorFiltro)&&i.nome.toLocaleLowerCase("pt-BR").includes(busca.trim().toLocaleLowerCase("pt-BR")));
-  function tabela(lista:typeof itens){return <section className="mt-3 space-y-1.5" aria-label={aba==="lista"?"Produtos pendentes":"Produtos no carrinho"}>
-    {lista.length===0&&<div className="rounded-2xl border bg-card px-4 py-8 text-center text-sm text-muted-foreground">Nenhum produto encontrado nesta aba.</div>}
-    {lista.map(i=><article key={i.id} className="rounded-xl border bg-card px-3 py-2.5 shadow-sm">
-      <div className="flex items-center gap-2.5"><button type="button" aria-label={i.comprado?"Devolver "+i.nome+" à lista":"Colocar "+i.nome+" no carrinho"} className={"flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border "+(i.comprado?"bg-primary text-primary-foreground":"bg-background")} onClick={()=>toggleItem(i.id).catch(()=>{})}>{i.comprado?<Check className="h-5 w-5"/>:<ShoppingCart className="h-5 w-5"/>}</button><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{i.nome}</p><p className="truncate text-xs text-muted-foreground">{i.setor}</p></div><strong className="shrink-0 text-sm tabular-nums">{brl(totalItem(i))}</strong><button className="rounded-lg p-2 text-muted-foreground" aria-label={"Editar "+i.nome} onClick={()=>{setEditando(i.id);setEdicao({nome:i.nome,setor:i.setor});}}><Pencil className="h-4 w-4"/></button><button className="rounded-lg p-2 text-muted-foreground" aria-label={"Excluir "+i.nome} onClick={()=>{if(window.confirm("Excluir "+i.nome+" da lista?"))removeItem(i.id).catch(()=>{});}}><Trash2 className="h-4 w-4"/></button></div>
-      <div className="mt-2 grid grid-cols-2 gap-2 pl-[54px]"><label className="min-w-0 text-xs text-muted-foreground">Quantidade{campo(i,"qtd")}</label><label className="min-w-0 text-xs text-muted-foreground">Preço unitário{campo(i,"preco")}</label></div>
-    </article>)}
-  </section>}
+  function tabela(lista:typeof itens){
+    const grupos=aba==="carrinho"?[["Carrinho",lista] as const]:Array.from(new Set(lista.map(i=>i.setor))).map(setor=>[setor,lista.filter(i=>i.setor===setor)] as const);
+    return <section className="mt-3 space-y-3" aria-label={aba==="lista"?"Produtos pendentes":"Produtos no carrinho"}>
+      {lista.length===0&&<div className="rounded-2xl border bg-card px-4 py-8 text-center text-sm text-muted-foreground">Nenhum produto encontrado nesta aba.</div>}
+      {grupos.map(([setor,produtos])=><div key={setor} className="overflow-hidden rounded-2xl border bg-card">
+        {aba==="lista"&&<button className="flex w-full items-center justify-between bg-emerald-50 px-3 py-3 text-left text-sm font-bold text-emerald-950" onClick={()=>setRecolhidos(p=>p.includes(setor)?p.filter(x=>x!==setor):[...p,setor])}><span>{setor}</span><span className="flex items-center gap-2"><span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-normal">{produtos.length} itens</span>{recolhidos.includes(setor)?<ChevronDown className="h-4 w-4"/>:<ChevronUp className="h-4 w-4"/>}</span></button>}
+        {!recolhidos.includes(setor)&&<><div className="grid grid-cols-[minmax(0,1fr)_42px_76px_66px_36px] items-center gap-1 border-b bg-muted/60 px-2 py-2 text-[10px] font-semibold text-muted-foreground sm:grid-cols-[minmax(0,1fr)_52px_90px_86px_40px] sm:text-xs"><span>Produto</span><span>Qtd</span><span>Preço un.</span><span className="text-right">Total</span><span/></div>
+        {produtos.map(i=><div key={i.id} className="grid grid-cols-[minmax(0,1fr)_42px_76px_66px_36px] items-center gap-1 border-b px-2 py-2 last:border-0 sm:grid-cols-[minmax(0,1fr)_52px_90px_86px_40px]"><div className="min-w-0"><p className="break-words text-xs font-medium leading-tight sm:text-sm">{i.nome}</p></div><div className="min-w-0">{campo(i,"qtd")}</div><div className="min-w-0">{campo(i,"preco")}</div><strong className="min-w-0 text-right text-[11px] tabular-nums sm:text-sm">{brl(totalItem(i))}</strong><button type="button" aria-label={i.comprado?"Devolver "+i.nome+" à lista":"Colocar "+i.nome+" no carrinho"} title={i.comprado?"Devolver à lista":"Colocar no carrinho"} className={"flex h-9 w-9 items-center justify-center rounded-lg "+(i.comprado?"bg-emerald-100 text-emerald-900":"bg-emerald-800 text-white")} onClick={()=>toggleItem(i.id).catch(()=>{})}>{i.comprado?<Check className="h-4 w-4"/>:<ShoppingCart className="h-4 w-4"/>}</button></div>)}</>}
+      </div>)}
+    </section>}
 
 
   return (
@@ -99,18 +103,18 @@ function Lista() {
         </form>}
       </div>
       {listaId && <div className="mb-4 rounded-2xl border bg-card p-4"><p className="mb-2 text-sm text-muted-foreground">Lista mensal baseada na planilha de setembro. Mantém os itens já cadastrados e não duplica nomes. Os preços ficam em branco para preencher durante a compra.</p><Button type="button" variant="outline" className="w-full min-h-12" disabled={importando} onClick={async()=>{if(!window.confirm("Adicionar os produtos da lista padrão a esta lista, sem apagar os itens existentes?"))return;setImportando(true);try{const n=await importarListaPadrao();toast.success(n?`${n} produtos adicionados à lista.`:"Todos os produtos da lista padrão já estão presentes.");}catch{toast.error("Não foi possível carregar a lista padrão.");}finally{setImportando(false);}}}>{importando?"Carregando produtos...":"Carregar lista padrão do mês"}</Button></div>}
-      {listaId && <div className="sticky top-0 z-20 -mx-2 bg-background/95 px-2 py-2 backdrop-blur"><BudgetCard /><div className="mt-2 rounded-xl border bg-card px-3 py-2 text-sm"><div className="flex items-center justify-between"><span>Gasto no carrinho</span><strong>{brl(totalCarrinho)}</strong></div><div className="flex items-center justify-between"><span>Restante do orçamento</span><strong>{brl(Math.max(0,(listas.find(l=>l.id===listaId)?.orcamento||0)-totalCarrinho))}</strong></div></div></div>}
-      {listaId && <div className="mt-4 grid grid-cols-2 gap-3">
-        <Button asChild size="lg" className="h-14 rounded-2xl"><Link to="/adicionar"><Plus className="h-5 w-5" /> Adicionar</Link></Button>
+      {listaId && <div className="sticky top-0 z-20 -mx-2 bg-background/95 px-2 py-2 backdrop-blur"><div className="rounded-2xl bg-emerald-50 px-4 py-3 text-emerald-950"><div className="text-sm font-semibold">Orçamento: {brl(listas.find(l=>l.id===listaId)?.orcamento||0)}</div><div className="mt-2 h-2 overflow-hidden rounded-full bg-emerald-100"><div className="h-full rounded-full bg-emerald-800" style={{width:`${Math.min(100,(totalCarrinho/Math.max(1,Number(listas.find(l=>l.id===listaId)?.orcamento||0)))*100)}%`}}/></div><div className="mt-2 flex justify-between gap-2 text-xs"><span>Gasto: <strong>{brl(totalCarrinho)}</strong></span><span>Restante: <strong>{brl(Math.max(0,Number(listas.find(l=>l.id===listaId)?.orcamento||0)-totalCarrinho))}</strong></span></div></div></div>}
+      {listaId && <div className="mt-3 grid grid-cols-2 gap-2">
+        <Button asChild size="lg" className="h-11 rounded-xl"><Link to="/adicionar"><Plus className="h-5 w-5" /> Adicionar</Link></Button>
         <Button asChild size="lg" variant="outline" className="h-14 rounded-2xl"><Link to="/adicionar" search={{ inesperado: true }}><Zap className="h-5 w-5" /> Item inesperado</Link></Button>
       </div>}
 
-      {listaId && <div className="mt-4"><div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted p-1"><button className={"min-h-12 rounded-xl text-sm font-semibold "+(aba==="lista"?"bg-primary text-primary-foreground shadow-sm":"")} onClick={()=>setAba("lista")}>Lista ({pendentes.length})</button><button className={"min-h-12 rounded-xl text-sm font-semibold "+(aba==="carrinho"?"bg-primary text-primary-foreground shadow-sm":"")} onClick={()=>setAba("carrinho")}>Carrinho ({carrinho.length})</button></div><div className="sticky top-[220px] z-10 mt-3 bg-background/95 py-2 backdrop-blur"><label className="flex h-12 items-center gap-2 rounded-xl border bg-card px-3"><Search className="h-5 w-5 text-muted-foreground"/><input className="w-full min-w-0 bg-transparent text-base outline-none" placeholder="Buscar produto..." value={busca} onChange={e=>setBusca(e.target.value)}/></label><div className="mt-2 flex flex-wrap gap-1.5">{setores.map(setor=><button key={setor} onClick={()=>setSetorFiltro(setor)} className={"rounded-full border px-3 py-2 text-xs font-medium "+(setorFiltro===setor?"bg-primary text-primary-foreground":"bg-card")}>{setor}</button>)}</div></div>{tabela(visiveis)}</div>}
+      {listaId && <div className="mt-3"><div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted p-1"><button className={"min-h-12 rounded-xl text-sm font-semibold "+(aba==="lista"?"bg-primary text-primary-foreground shadow-sm":"")} onClick={()=>setAba("lista")}>Lista ({pendentes.length})</button><button className={"min-h-12 rounded-xl text-sm font-semibold "+(aba==="carrinho"?"bg-primary text-primary-foreground shadow-sm":"")} onClick={()=>setAba("carrinho")}>Carrinho ({carrinho.length})</button></div><div className="sticky top-[118px] z-10 mt-2 bg-background/95 py-2 backdrop-blur"><label className="flex h-12 items-center gap-2 rounded-xl border bg-card px-3"><Search className="h-5 w-5 text-muted-foreground"/><input className="w-full min-w-0 bg-transparent text-base outline-none" placeholder="Buscar produto..." value={busca} onChange={e=>setBusca(e.target.value)}/></label><div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">{setores.map(setor=><button key={setor} onClick={()=>setSetorFiltro(setor)} className={"shrink-0 rounded-full border px-3 py-2 text-xs font-medium "+(setorFiltro===setor?"bg-primary text-primary-foreground":"bg-card")}>{setor}</button>)}</div></div>{tabela(visiveis)}</div>}
       {listaId && <p className="mt-4 text-sm">No carrinho: {brl(totalCarrinho)} · Produtos pendentes: {pendentes.length} · Total com preços informados: {brl(total)}</p>}
       {editando && <div className="mt-4 rounded-2xl border bg-card p-4"><h3 className="font-semibold">Editar produto e setor</h3><Input className="mt-2" value={edicao.nome} onChange={e=>setEdicao(p=>({...p,nome:e.target.value}))}/><select className="mt-2 w-full rounded-xl border bg-background p-3" value={edicao.setor} onChange={e=>setEdicao(p=>({...p,setor:e.target.value}))}>{["Hortifrúti","Mercearia","Laticínios","Carnes","Padaria","Limpeza","Bebidas","Higiene"].map(s=><option key={s}>{s}</option>)}</select><div className="mt-3 flex gap-2"><Button onClick={async()=>{try{await updateItem(editando,{nome:edicao.nome,setor:edicao.setor as (typeof itens)[number]["setor"]});setEditando(null);}catch{toast.error("Não foi possível editar.");}}}>Salvar</Button><Button variant="outline" onClick={()=>setEditando(null)}>Cancelar</Button></div></div>}
-      {listaId && <div className="mt-6 flex items-center justify-between rounded-3xl bg-foreground p-5 text-background">
+      {listaId && aba==="carrinho" && <div className="mt-6 flex items-center justify-between rounded-2xl bg-emerald-50 p-4 text-emerald-950">
         <span className="font-medium">Total da compra</span>
-        <span className="font-display text-2xl font-extrabold">{brl(total)}</span>
+        <span className="font-display text-xl font-extrabold">{brl(totalCarrinho)}</span>
       </div>}
       {listaId && aba==="carrinho" && <Button size="lg" className="mt-4 h-14 w-full rounded-2xl text-base" disabled={!itens.some(i => i.comprado)} onClick={() => finalizarCompra().catch(() => {})}>
         Finalizar compra (itens marcados)
