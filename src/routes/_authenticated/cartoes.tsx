@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { CreditCard, Plus, Pencil } from "lucide-react";
+import { CreditCard, Plus, Pencil, Trash2 } from "lucide-react";
 import { Page } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +27,9 @@ const estilo: Record<Cartao["cor"], string> = {
 };
 
 function Cartoes() {
-  const { cartoes, listas, addCartao, salvarCartao } = useDemo();
+  const { cartoes, listas, addCartao, salvarCartao, excluirCartao } = useDemo();
   const [aberto, setAberto] = useState(false);
+  const [excluindo, setExcluindo] = useState<string | null>(null);
   const [editando, setEditando] = useState<Cartao | null>(null);
   const [novoSaldo, setNovoSaldo] = useState("");
   const [novoDestinado, setNovoDestinado] = useState("");
@@ -76,12 +77,13 @@ function Cartoes() {
         </form>
       )}
       {editando && <form onSubmit={salvarEdicao} className="mb-5 space-y-3 rounded-3xl border bg-card p-5 shadow-soft"><h2 className="font-bold">Editar cartão</h2><Label>Nome do cartão</Label><Input className="h-12" value={novoNome} onChange={e=>setNovoNome(e.target.value)} required/><Label>Saldo disponível (R$)</Label><Input className="h-12" inputMode="decimal" value={novoSaldo} onFocus={e=>e.currentTarget.select()} onChange={e=>setNovoSaldo(e.target.value)} required/><Label>Valor destinado às compras (R$)</Label><Input className="h-12" inputMode="decimal" value={novoDestinado} onFocus={e=>e.currentTarget.select()} onChange={e=>setNovoDestinado(e.target.value)} required/><p className="text-xs text-muted-foreground">Este valor aparece no card Saldo do orçamento.</p><div className="flex gap-2"><Button type="submit" disabled={salvandoEdicao} className="flex-1">Salvar alterações</Button><Button type="button" variant="outline" onClick={()=>setEditando(null)}>Cancelar</Button></div></form>}
+      {excluindo && (()=>{const cartao=cartoes.find(c=>c.id===excluindo);if(!cartao)return null;return <div className="mb-5 rounded-3xl border border-red-200 bg-card p-5 shadow-soft"><h2 className="text-lg font-bold">Excluir cartão?</h2><p className="mt-2 text-sm text-muted-foreground">Deseja excluir <strong>{cartao.nome}</strong> ({brl(cartao.saldo)})? Esta ação não pode ser desfeita. Cartões associados a listas ou compras não poderão ser excluídos.</p><div className="mt-4 flex gap-2"><Button type="button" variant="destructive" className="flex-1" onClick={async()=>{try{await excluirCartao(cartao.id);toast.success("Cartão excluído.");setExcluindo(null);if(editando?.id===cartao.id)setEditando(null);}catch(error){toast.error(error instanceof Error?error.message:"Não foi possível excluir o cartão.");}}}>Confirmar exclusão</Button><Button type="button" variant="outline" onClick={()=>setExcluindo(null)}>Cancelar</Button></div></div>})()}
       <ul className="space-y-4">
         {cartoes.map((c) => (
           <li key={c.id} className={`rounded-3xl p-5 shadow-soft ${estilo[c.cor]}`}>
             <div className="flex items-center justify-between">
               <span className="font-semibold">{c.nome}</span>
-              <div className="flex items-center gap-2"><button type="button" className="rounded-lg p-2" aria-label={"Editar saldo de "+c.nome} onClick={()=>{setEditando(c);setNovoNome(c.nome);setNovoSaldo(String(c.saldo));setNovoDestinado(String(listas.find(l=>l.cartao_id===c.id&&l.tipo==="normal")?.orcamento||0));}}><Pencil className="h-5 w-5"/></button><CreditCard className="h-6 w-6 opacity-80" /></div>
+              <div className="flex items-center gap-2"><button type="button" className="rounded-lg p-2" aria-label={"Editar saldo de "+c.nome} onClick={()=>{setEditando(c);setNovoNome(c.nome);setNovoSaldo(String(c.saldo));setNovoDestinado(String(listas.find(l=>l.cartao_id===c.id&&l.tipo==="normal")?.orcamento||0));}}><Pencil className="h-5 w-5"/></button><button type="button" className="rounded-lg p-2" aria-label={"Excluir cartão "+c.nome} onClick={()=>setExcluindo(c.id)}><Trash2 className="h-5 w-5"/></button><CreditCard className="h-6 w-6 opacity-80" /></div>
             </div>
             <p className="mt-6 text-sm opacity-75">Saldo disponível</p>
             <p className="font-display text-3xl font-extrabold">{brl(c.saldo)}</p>
