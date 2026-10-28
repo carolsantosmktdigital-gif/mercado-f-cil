@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_authenticated/lista")({
 });
 
 function Lista() {
-  const { itens, toggleItem, updateItem, removeItem, finalizarCompra, listas, listaId, selecionarLista, criarLista, cartoes, importarListaPadrao } = useDemo();
+  const { itens, toggleItem, updateItem, removeItem, finalizarCompra, listas, listaId, selecionarLista, criarLista, cartoes, importarListaPadrao, atualizarOrcamento } = useDemo();
   const [aba, setAba] = useState<"lista"|"carrinho">("lista");
   const [busca, setBusca] = useState("");
   const [recolhidos, setRecolhidos] = useState<string[]>([]);
@@ -38,6 +38,8 @@ function Lista() {
   const [reserva, setReserva] = useState("0");
   const [salvando, setSalvando] = useState(false);
   const [importando, setImportando] = useState(false);
+  const [editarOrcamento, setEditarOrcamento] = useState(false);
+  const [orcamentoNovo, setOrcamentoNovo] = useState("");
   const [modeloCarregado, setModeloCarregado] = useState<Record<string, boolean>>({});
   useEffect(()=>{if(!listaId)return;try{setModeloCarregado(p=>({...p,[listaId]:localStorage.getItem("mercado-facil-modelo-"+listaId)==="sim"}));}catch{}},[listaId]);
   async function salvarLista(e: React.FormEvent) {
@@ -106,6 +108,8 @@ function Lista() {
         </form>}
       </div>
       {listaId && !modeloCarregado[listaId] && itens.length < 50 && <div className="mb-4 rounded-2xl border bg-card p-4"><p className="mb-2 text-sm text-muted-foreground">Lista mensal baseada na planilha de setembro. Mantém os itens já cadastrados e não duplica nomes. Os preços ficam em branco para preencher durante a compra.</p><Button type="button" variant="outline" className="w-full min-h-12" disabled={importando} onClick={async()=>{if(!window.confirm("Adicionar os produtos da lista padrão a esta lista, sem apagar os itens existentes?"))return;setImportando(true);try{const n=await importarListaPadrao();setModeloCarregado(p=>({...p,[listaId]:true}));try{localStorage.setItem("mercado-facil-modelo-"+listaId,"sim");}catch{}toast.success(n?`${n} produtos adicionados à lista.`:"Todos os produtos da lista padrão já estão presentes.");}catch{toast.error("Não foi possível carregar a lista padrão.");}finally{setImportando(false);}}}>{importando?"Carregando produtos...":"Carregar lista padrão do mês"}</Button></div>}
+      {listaId && <div className="mb-2 flex items-center justify-between rounded-xl border bg-card px-3 py-2 text-sm"><span>Orçamento da lista: <strong>{brl(listas.find(l=>l.id===listaId)?.orcamento||0)}</strong></span><Button variant="outline" size="sm" onClick={()=>{setOrcamentoNovo(String(listas.find(l=>l.id===listaId)?.orcamento||0));setEditarOrcamento(v=>!v);}}>✏️ Alterar</Button></div>}
+      {listaId && editarOrcamento && <form className="mb-3 space-y-2 rounded-xl border bg-card p-3" onSubmit={async e=>{e.preventDefault();try{await atualizarOrcamento(Number(orcamentoNovo.replace(",",".")));setEditarOrcamento(false);toast.success("Orçamento atualizado.");}catch{}}}><label className="block text-sm font-medium">Novo orçamento da compra (R$)<Input className="mt-1 h-12" inputMode="decimal" value={orcamentoNovo} onFocus={e=>e.currentTarget.select()} onChange={e=>setOrcamentoNovo(e.target.value)}/></label><div className="flex gap-2"><Button type="submit">Salvar orçamento</Button><Button type="button" variant="outline" onClick={()=>setEditarOrcamento(false)}>Cancelar</Button></div></form>}
       {listaId && <div className="sticky top-0 z-20 -mx-2 bg-background/95 px-2 py-2 backdrop-blur"><div className="rounded-2xl bg-emerald-50 px-4 py-3 text-emerald-950"><div className="text-sm font-semibold">Orçamento: {brl(listas.find(l=>l.id===listaId)?.orcamento||0)}</div><div className="mt-2 h-2 overflow-hidden rounded-full bg-emerald-100"><div className="h-full rounded-full bg-emerald-800" style={{width:`${Math.min(100,(totalCarrinho/Math.max(1,Number(listas.find(l=>l.id===listaId)?.orcamento||0)))*100)}%`}}/></div><div className="mt-2 flex justify-between gap-2 text-xs"><span>Gasto: <strong>{brl(totalCarrinho)}</strong></span><span>Restante: <strong>{brl(Math.max(0,Number(listas.find(l=>l.id===listaId)?.orcamento||0)-totalCarrinho))}</strong></span></div></div></div>}
       {listaId && <div className="mt-3 grid grid-cols-2 gap-2">
         <Button asChild size="lg" className="h-11 rounded-xl"><Link to="/adicionar"><Plus className="h-5 w-5" /> Adicionar</Link></Button>
