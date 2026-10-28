@@ -20,7 +20,7 @@ type Store = {
  criarLista: (nome: string, cartaoId: string, orcamento: number, reserva: number) => Promise<void>;
  itens: ItemLista[]; catalogo: ProdutoCatalogo[]; historico: Compra[]; orcamento: number; cartaoCompraId: string;
  addCartao: (nome: string, saldo: number) => Promise<void>; toggleItem: (id: string) => Promise<void>;
- addItem: (i: Omit<ItemLista, "id" | "comprado">) => Promise<void>; removeItem: (id: string) => Promise<void>;
+ addItem: (i: Omit<ItemLista, "id" | "comprado">) => Promise<void>; updateItem: (id: string, patch: Partial<Pick<ItemLista, "nome" | "setor" | "qtd" | "preco">>) => Promise<void>; removeItem: (id: string) => Promise<void>;
  finalizarCompra: () => Promise<void>;
 };
 const Ctx = createContext<Store | null>(null);
@@ -50,7 +50,8 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
  const store:Store={familia,cartoes,listas,listaId,selecionarLista:setSelectedId,itens,catalogo:catQ.data||[],historico:histQ.data||[],orcamento:lista?.orcamento||0,cartaoCompraId:lista?.cartao_id||"",
  addCartao:async(nome,saldo)=>{if(!nome.trim()||saldo<0||!Number.isFinite(saldo))throw new Error("Dados inválidos");const {error}=await db.from("cartoes").insert({familia_id:fid,nome,saldo,cor:"claro"});check(error);await refresh("cartoes");},
  criarLista:async(nome,cartaoId,orcamento,reserva)=>{const card=cartoes.find(c=>c.id===cartaoId);if(!card||!nome.trim()||orcamento<=0||reserva<0||orcamento+reserva>card.saldo){toast.error("Confira o cartão, o orçamento e a reserva.");return;}const {data,error}=await db.from("listas_compras").insert({familia_id:fid,cartao_id:cartaoId,nome,orcamento,valor_reservado:reserva,status:"em_andamento",tipo:"normal"}).select("id").single();check(error);await refresh("listas");if(data?.id)setSelectedId(data.id);},
- toggleItem:async(id)=>{const item=itens.find(i=>i.id===id);if(!item)return;const {error}=await db.from("itens_lista").update({comprado:!item.comprado}).eq("id",id).eq("lista_id",listaId);check(error);await refresh("itens");},
+ toggleItem:async(id)=>{const item=itens.find(i=>i.id===id);if(!item)return;if(!item.comprado && !(item.preco>0)){toast.error("Informe o preço antes de enviar ao Carrinho.");return;}const {error}=await db.from("itens_lista").update({comprado:!item.comprado}).eq("id",id).eq("lista_id",listaId);check(error);await refresh("itens");},
+ updateItem:async(id,patch)=>{const item=itens.find(i=>i.id===id);if(!item)return;const updated={...item,...patch};if(!updated.nome.trim()||!Number.isFinite(updated.qtd)||updated.qtd<=0||!Number.isFinite(updated.preco)||updated.preco<0){toast.error("Confira os dados do produto.");return;}const {error}=await db.from("itens_lista").update(patch).eq("id",id).eq("lista_id",listaId).eq("familia_id",fid);check(error);await refresh("itens");},
  removeItem:async(id)=>{const {error}=await db.from("itens_lista").delete().eq("id",id).eq("lista_id",listaId);check(error);await refresh("itens");},
  addItem:async(novo)=>{if(!listaId){toast.error("Crie uma lista antes de adicionar produtos.");return;}const {error}=await db.from("itens_lista").insert({familia_id:fid,lista_id:listaId,nome:novo.nome,setor:novo.setor,qtd:novo.qtd,preco:novo.preco,inesperado:!!novo.inesperado});check(error);
  if(!(catQ.data||[]).some(p=>p.nome.toLowerCase()===novo.nome.toLowerCase())){const {error:catalogError}=await db.from("produtos").insert({familia_id:fid,nome:novo.nome,setor:novo.setor,preco_ref:novo.preco});if(catalogError && catalogError.code!=="23505")toast.error("Produto salvo, mas catálogo não atualizado.");}await refresh("itens","produtos");},
