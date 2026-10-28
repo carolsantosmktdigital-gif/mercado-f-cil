@@ -39,7 +39,7 @@ function Lista() {
   const pendentes = itens.filter(i=>!i.comprado);
   const carrinho = itens.filter(i=>i.comprado);
   const totalCarrinho = carrinho.reduce((s,i)=>s+totalItem(i),0);
-  async function salvarCampo(id:string,campo:"qtd"|"preco") {const valor=Number((rascunhos[id]?.[campo]||"").replace(",","."));if(!Number.isFinite(valor)||(campo==="qtd"?valor<=0:valor<0)){toast.error("Valor inválido.");return;}try{await updateItem(id,{[campo]:valor});}catch{toast.error("Não foi possível salvar.");}}
+  async function salvarCampo(id:string,campo:"qtd"|"preco") {const valor=Number((rascunhos[id]?.[campo]||"").replace(",","."));if(!Number.isFinite(valor)||(campo==="qtd"?valor<0:valor<0)){toast.error("Valor inválido.");return;}try{if(campo==="qtd"&&valor===0){await removeItem(id);toast.success("Produto retirado da lista desta família.");return;}await updateItem(id,{[campo]:valor});}catch{toast.error("Não foi possível salvar a alteração.");}}
   function campo(i:(typeof itens)[number], tipo:"qtd"|"preco") {
     const atual = tipo==="qtd" ? String(i.qtd) : (i.preco ? String(i.preco) : "");
     return <Input aria-label={(tipo==="qtd"?"Quantidade de ":"Preço de ")+i.nome}
