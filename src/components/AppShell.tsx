@@ -1,12 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { Home, CreditCard, ListChecks, BookOpen, History } from "lucide-react";
+import { Home, CreditCard, ListChecks, History } from "lucide-react";
 
 const tabs = [
   { to: "/", label: "Início", icon: Home },
   { to: "/cartoes", label: "Cartões", icon: CreditCard },
   { to: "/lista", label: "Lista", icon: ListChecks },
-  { to: "/catalogo", label: "Catálogo", icon: BookOpen },
   { to: "/historico", label: "Histórico", icon: History },
 ] as const;
 
@@ -28,7 +27,7 @@ export function Page({ title, subtitle, action, children }: { title: string; sub
 export function BottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur">
-      <ul className="mx-auto grid max-w-md grid-cols-5">
+      <ul className="mx-auto grid max-w-md grid-cols-4">
         {tabs.map(({ to, label, icon: Icon }) => (
           <li key={to}>
             <Link
