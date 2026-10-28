@@ -69,7 +69,7 @@ function Lista() {
       {listaId && <div className="mt-4 grid grid-cols-2 gap-3">
         <Button asChild size="lg" className="h-14 rounded-2xl"><Link to="/adicionar"><Plus className="h-5 w-5" /> Adicionar</Link></Button>
         <Button asChild size="lg" variant="outline" className="h-14 rounded-2xl"><Link to="/adicionar" search={{ inesperado: true }}><Zap className="h-5 w-5" /> Item inesperado</Link></Button>
-      </div>
+      </div>}
 
       {listaId && <ul className="mt-6 space-y-3">
         {ordenados.map((i) => (
