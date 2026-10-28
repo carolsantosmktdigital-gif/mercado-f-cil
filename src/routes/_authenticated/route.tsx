@@ -83,7 +83,7 @@ function FamiliaSetup({ userId }: { userId: string }) {
     <div className="mx-auto max-w-md space-y-6 px-5 py-10">
       <div>
         <h1 className="text-3xl font-extrabold">Sua família</h1>
-        <p className="mt-1 text-muted-foreground">Todos da família compartilham a mesma lista, catálogo e histórico.</p>
+        <p className="mt-1 text-muted-foreground">Digite o nome da sua família uma única vez neste celular. Todos da família compartilham a lista, os cartões e o histórico.</p>
       </div>
       <section className="space-y-3 rounded-3xl bg-card p-5 shadow-soft">
         <h2 className="text-lg font-bold">Criar uma família</h2>
@@ -92,10 +92,10 @@ function FamiliaSetup({ userId }: { userId: string }) {
         <Button size="lg" className="h-12 w-full rounded-2xl" disabled={busy} onClick={() => rodar("criar_familia")}>Criar família</Button>
       </section>
       <section className="space-y-3 rounded-3xl bg-card p-5 shadow-soft">
-        <h2 className="text-lg font-bold">Entrar com código</h2>
-        <Label>Código recebido</Label>
-        <Input className="h-12 uppercase" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Ex.: A1B2C3" />
-        <Button size="lg" variant="outline" className="h-12 w-full rounded-2xl" disabled={busy || !codigo.trim()} onClick={() => rodar("entrar_familia")}>Entrar na família</Button>
+        <h2 className="text-lg font-bold">Entrar na família</h2>
+        <Label>Nome da família</Label>
+        <Input className="h-12" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Ex.: Família Teste" />
+        <Button size="lg" variant="outline" className="h-12 w-full rounded-2xl" disabled={busy || !codigo.trim()} onClick={() => rodar("entrar_familia")}>Continuar</Button>
       </section>
 
     </div>
