@@ -1,6 +1,6 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/AppShell";
@@ -12,15 +12,34 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+    return {};
   },
   component: Layout,
 });
 
 function Layout() {
-  const { user } = Route.useRouteContext();
+  const [user, setUser] = useState<{ id: string } | null>(null);
+  const [authError, setAuthError] = useState("");
+  useEffect(() => {
+    let active = true;
+    async function iniciar() {
+      const { data: existing } = await supabase.auth.getUser();
+      if (!active) return;
+      if (existing.user) { setUser(existing.user); return; }
+      const { data, error } = await supabase.auth.signInAnonymously();
+      if (!active) return;
+      if (error || !data.user) { setAuthError(error?.message || "Não foi possível iniciar."); return; }
+      setUser(data.user);
+    }
+    iniciar();
+    return () => { active = false; };
+  }, []);
+  if (authError) return <div className="mx-auto max-w-md p-8 text-center"><h1 className="text-2xl font-bold">Mercado Fácil</h1><p className="mt-4 text-muted-foreground">Não foi possível iniciar automaticamente: {authError}</p><Button className="mt-4" onClick={() => window.location.reload()}>Tentar novamente</Button></div>;
+  if (!user) return <p className="p-10 text-center text-muted-foreground">Preparando seu Mercado Fácil…</p>;
+  return <AuthenticatedLayout user={user} />;
+}
+
+function AuthenticatedLayout({ user }: { user: { id: string } }) {
   const famQ = useQuery({
     queryKey: ["familia", user.id],
     queryFn: async (): Promise<Familia | null> => {
@@ -78,7 +97,7 @@ function FamiliaSetup({ userId }: { userId: string }) {
         <Input className="h-12 uppercase" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Ex.: A1B2C3" />
         <Button size="lg" variant="outline" className="h-12 w-full rounded-2xl" disabled={busy || !codigo.trim()} onClick={() => rodar("entrar_familia")}>Entrar na família</Button>
       </section>
-      <Button variant="ghost" className="w-full" onClick={() => supabase.auth.signOut()}>Sair</Button>
+
     </div>
   );
 }
