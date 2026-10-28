@@ -58,6 +58,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "language", content: "pt-BR" },
+      { property: "og:locale", content: "pt_BR" },
       { title: "Mercado Fácil" },
       { name: "description", content: "Organize compras de supermercado com cartões de alimentação e vale-compras." },
       { property: "og:type", content: "website" },
@@ -97,6 +99,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   useEffect(() => {
+    document.documentElement.lang = "pt-BR";
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
