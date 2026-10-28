@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, ListChecks, Plus, ShoppingCart } from "lucide-react";
 import { Page } from "@/components/AppShell";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import { BudgetCard } from "@/components/BudgetCard";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +22,12 @@ export const Route = createFileRoute("/_authenticated/")({
 });
 
 function Inicio() {
-  const { cartoes, itens, familia } = useDemo();
+  const { cartoes, itens, familia, listas, listaId, selecionarLista, criarLista } = useDemo();
+  const [abrirNovaLista,setAbrirNovaLista]=useState(false);
+  const [nomeLista,setNomeLista]=useState("");
+  const [cartaoId,setCartaoId]=useState("");
+  const [valorLista,setValorLista]=useState("");
+  const [criando,setCriando]=useState(false);
   const total = cartoes.reduce((s, c) => s + c.saldo, 0);
   const pendentes = itens.filter((i) => !i.comprado).length;
   return (
@@ -46,6 +54,8 @@ function Inicio() {
           ))}
         </ul>
       </section>
+
+      <section className="mt-5 rounded-2xl bg-card p-4 shadow-soft"><div className="flex items-center justify-between gap-2"><h2 className="font-bold">Suas listas</h2><Button size="sm" onClick={()=>setAbrirNovaLista(v=>!v)}><Plus className="h-4 w-4"/> Nova lista</Button></div><div className="mt-3 flex flex-wrap gap-2">{listas.map(l=><button key={l.id} type="button" onClick={()=>selecionarLista(l.id)} className={"rounded-xl border px-3 py-2 text-sm "+(listaId===l.id?"bg-primary text-primary-foreground":"bg-muted")}>{l.nome}</button>)}</div>{abrirNovaLista&&<form className="mt-4 space-y-3" onSubmit={async e=>{e.preventDefault();setCriando(true);try{await criarLista(nomeLista.trim(),cartaoId,Number(valorLista.replace(",",".")),0);setAbrirNovaLista(false);setNomeLista("");setValorLista("");toast.success("Lista criada.");}catch{toast.error("Não foi possível criar a lista.");}finally{setCriando(false);}}}><Input required placeholder="Nome da lista" value={nomeLista} onChange={e=>setNomeLista(e.target.value)}/><select required className="h-12 w-full rounded-xl border bg-background px-3" value={cartaoId} onChange={e=>setCartaoId(e.target.value)}><option value="">Selecione um cartão</option>{cartoes.map(c=><option key={c.id} value={c.id}>{c.nome} · {brl(c.saldo)}</option>)}</select><Input required inputMode="decimal" placeholder="Valor destinado às compras (R$)" value={valorLista} onChange={e=>setValorLista(e.target.value)}/><Button disabled={criando} type="submit" className="w-full">Criar lista</Button></form>}</section>
 
       <h2 className="mb-3 mt-8 flex items-center gap-2 text-xl font-bold"><ShoppingCart className="h-5 w-5" /> Compra em andamento</h2>
       <BudgetCard />
