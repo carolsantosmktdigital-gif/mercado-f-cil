@@ -100,7 +100,7 @@ function Lista() {
         <span className="font-medium">Total da compra</span>
         <span className="font-display text-2xl font-extrabold">{brl(total)}</span>
       </div>}
-      {listaId && <Button size="lg" className="mt-4 h-14 w-full rounded-2xl text-base" onClick={() => finalizarCompra().catch(() => {})}>
+      {listaId && <Button size="lg" className="mt-4 h-14 w-full rounded-2xl text-base" disabled={!itens.some(i => i.comprado)} onClick={() => finalizarCompra().catch(() => {})}>
         Finalizar compra (itens marcados)
       </Button>}
     </Page>
