@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_authenticated/lista")({
 });
 
 function Lista() {
-  const { itens, toggleItem, updateItem, removeItem, finalizarCompra, listas, listaId, selecionarLista, criarLista, cartoes, importarListaPadrao, atualizarOrcamento } = useDemo();
+  const { itens, toggleItem, updateItem, removeItem, finalizarCompra, listas, listaId, importarListaPadrao } = useDemo();
   const [aba, setAba] = useState<"lista"|"carrinho">("lista");
   const [busca, setBusca] = useState("");
   const [recolhidos, setRecolhidos] = useState<string[]>([]);
@@ -31,26 +31,10 @@ function Lista() {
   const [edicao, setEdicao] = useState({nome:"",setor:"Mercearia"});
   const [rascunhos, setRascunhos] = useState<Record<string,{qtd:string,preco:string}>>({});
   useEffect(()=>{setRascunhos(Object.fromEntries(itens.map(i=>[i.id,{qtd:String(i.qtd),preco:i.preco?String(i.preco):""}])));},[itens]);
-  const [novo, setNovo] = useState(false);
-  const [nome, setNome] = useState("");
-  const [cartaoId, setCartaoId] = useState("");
-  const [orcamento, setOrcamento] = useState("");
-  const [reserva, setReserva] = useState("0");
-  const [salvando, setSalvando] = useState(false);
+  /* A criação de listas fica exclusivamente na página inicial. */
   const [importando, setImportando] = useState(false);
-  const [editarOrcamento, setEditarOrcamento] = useState(false);
-  const [orcamentoNovo, setOrcamentoNovo] = useState("");
   const [modeloCarregado, setModeloCarregado] = useState<Record<string, boolean>>({});
   useEffect(()=>{if(!listaId)return;try{setModeloCarregado(p=>({...p,[listaId]:localStorage.getItem("mercado-facil-modelo-"+listaId)==="sim"}));}catch{}},[listaId]);
-  async function salvarLista(e: React.FormEvent) {
-    e.preventDefault();
-    setSalvando(true);
-    try {
-      await criarLista(nome.trim(), cartaoId, Number(orcamento.replace(",",".")), Number(reserva.replace(",",".")));
-      setNovo(false); setNome(""); setOrcamento(""); setReserva("0");
-    } catch (e) { toast.error("Não foi possível criar a lista."); }
-    finally { setSalvando(false); }
-  }
   const total = itens.reduce((s, i) => s + totalItem(i), 0);
   const pendentes = itens.filter(i=>!i.comprado);
   const carrinho = itens.filter(i=>i.comprado);
@@ -84,32 +68,8 @@ function Lista() {
 
   return (
     <Page title="Lista de compras" subtitle={`${itens.filter((i) => i.comprado).length} de ${itens.length} no carrinho`}>
-      <div className="mb-4 rounded-3xl bg-card p-4 shadow-soft">
-        <div className="flex items-center justify-between gap-2">
-          <strong>Suas listas</strong>
-          <Button size="sm" onClick={() => setNovo(v=>!v)}><Plus className="h-4 w-4"/> Nova lista</Button>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {listas.map(l => <button key={l.id} onClick={()=>selecionarLista(l.id)}
-            className={`rounded-xl border px-3 py-2 text-sm ${listaId===l.id?"bg-primary text-primary-foreground":"bg-muted"}`}>
-            {l.nome}{l.tipo==="pendencias"?" (pendências)":""}
-          </button>)}
-        </div>
-        {listas.length===0 && <p className="mt-3 text-sm text-muted-foreground">Crie sua primeira lista para começar.</p>}
-        {novo && <form onSubmit={salvarLista} className="mt-4 space-y-3">
-          <Input placeholder="Nome da lista" value={nome} onChange={e=>setNome(e.target.value)} required />
-          <select className="h-12 w-full rounded-xl border bg-background px-3" value={cartaoId} onChange={e=>setCartaoId(e.target.value)} required>
-            <option value="">Escolha um cartão</option>
-            {cartoes.map(c=><option key={c.id} value={c.id}>{c.nome} · {brl(c.saldo)}</option>)}
-          </select>
-          <Input placeholder="Orçamento (R$)" inputMode="decimal" value={orcamento} onChange={e=>setOrcamento(e.target.value)} required />
-          <Input placeholder="Reserva (R$)" inputMode="decimal" value={reserva} onChange={e=>setReserva(e.target.value)} required />
-          <Button type="submit" disabled={salvando||!cartaoId} className="w-full">Criar lista</Button>
-        </form>}
-      </div>
+      <div className="mb-4 rounded-2xl bg-card px-4 py-4 shadow-soft"><p className="text-xs text-muted-foreground">Lista em uso</p><h2 className="text-xl font-bold">{listas.find(l=>l.id===listaId)?.nome||"Nenhuma lista selecionada"}</h2></div>
       {listaId && !modeloCarregado[listaId] && itens.length < 50 && <div className="mb-4 rounded-2xl border bg-card p-4"><p className="mb-2 text-sm text-muted-foreground">Lista mensal baseada na planilha de setembro. Mantém os itens já cadastrados e não duplica nomes. Os preços ficam em branco para preencher durante a compra.</p><Button type="button" variant="outline" className="w-full min-h-12" disabled={importando} onClick={async()=>{if(!window.confirm("Adicionar os produtos da lista padrão a esta lista, sem apagar os itens existentes?"))return;setImportando(true);try{const n=await importarListaPadrao();setModeloCarregado(p=>({...p,[listaId]:true}));try{localStorage.setItem("mercado-facil-modelo-"+listaId,"sim");}catch{}toast.success(n?`${n} produtos adicionados à lista.`:"Todos os produtos da lista padrão já estão presentes.");}catch{toast.error("Não foi possível carregar a lista padrão.");}finally{setImportando(false);}}}>{importando?"Carregando produtos...":"Carregar lista padrão do mês"}</Button></div>}
-      {listaId && <div className="mb-2 flex items-center justify-between rounded-xl border bg-card px-3 py-2 text-sm"><span>Orçamento da lista: <strong>{brl(listas.find(l=>l.id===listaId)?.orcamento||0)}</strong></span><Button variant="outline" size="sm" onClick={()=>{setOrcamentoNovo(String(listas.find(l=>l.id===listaId)?.orcamento||0));setEditarOrcamento(v=>!v);}}>✏️ Alterar</Button></div>}
-      {listaId && editarOrcamento && <form className="mb-3 space-y-2 rounded-xl border bg-card p-3" onSubmit={async e=>{e.preventDefault();try{await atualizarOrcamento(Number(orcamentoNovo.replace(",",".")));setEditarOrcamento(false);toast.success("Orçamento atualizado.");}catch{}}}><label className="block text-sm font-medium">Novo orçamento da compra (R$)<Input className="mt-1 h-12" inputMode="decimal" value={orcamentoNovo} onFocus={e=>e.currentTarget.select()} onChange={e=>setOrcamentoNovo(e.target.value)}/></label><div className="flex gap-2"><Button type="submit">Salvar orçamento</Button><Button type="button" variant="outline" onClick={()=>setEditarOrcamento(false)}>Cancelar</Button></div></form>}
       {listaId && <div className="sticky top-0 z-20 -mx-2 bg-background/95 px-2 py-2 backdrop-blur"><div className="rounded-2xl bg-emerald-50 px-4 py-3 text-emerald-950"><div className="text-sm font-semibold">Orçamento: {brl(listas.find(l=>l.id===listaId)?.orcamento||0)}</div><div className="mt-2 h-2 overflow-hidden rounded-full bg-emerald-100"><div className="h-full rounded-full bg-emerald-800" style={{width:`${Math.min(100,(totalCarrinho/Math.max(1,Number(listas.find(l=>l.id===listaId)?.orcamento||0)))*100)}%`}}/></div><div className="mt-2 flex justify-between gap-2 text-xs"><span>Gasto: <strong>{brl(totalCarrinho)}</strong></span><span>Restante: <strong>{brl(Math.max(0,Number(listas.find(l=>l.id===listaId)?.orcamento||0)-totalCarrinho))}</strong></span></div></div></div>}
       {listaId && <div className="mt-3 grid grid-cols-2 gap-2">
         <Button asChild size="lg" className="h-11 rounded-xl"><Link to="/adicionar"><Plus className="h-5 w-5" /> Adicionar</Link></Button>
