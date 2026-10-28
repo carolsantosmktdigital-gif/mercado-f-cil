@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_authenticated/lista")({
 });
 
 function Lista() {
-  const { itens, toggleItem, updateItem, removeItem, finalizarCompra, listas, listaId, selecionarLista, criarLista, cartoes } = useDemo();
+  const { itens, toggleItem, updateItem, removeItem, finalizarCompra, listas, listaId, selecionarLista, criarLista, cartoes, importarListaPadrao } = useDemo();
   const [editando, setEditando] = useState<string | null>(null);
   const [edicao, setEdicao] = useState({nome:"",setor:"Mercearia"});
   const [rascunhos, setRascunhos] = useState<Record<string,{qtd:string,preco:string}>>({});
@@ -32,6 +32,7 @@ function Lista() {
   const [orcamento, setOrcamento] = useState("");
   const [reserva, setReserva] = useState("0");
   const [salvando, setSalvando] = useState(false);
+  const [importando, setImportando] = useState(false);
   async function salvarLista(e: React.FormEvent) {
     e.preventDefault();
     setSalvando(true);
@@ -94,6 +95,7 @@ function Lista() {
           <Button type="submit" disabled={salvando||!cartaoId} className="w-full">Criar lista</Button>
         </form>}
       </div>
+      {listaId && <div className="mb-4 rounded-2xl border bg-card p-4"><p className="mb-2 text-sm text-muted-foreground">Lista mensal baseada na planilha de setembro. Mantém os itens já cadastrados e não duplica nomes. Os preços ficam em branco para preencher durante a compra.</p><Button type="button" variant="outline" className="w-full min-h-12" disabled={importando} onClick={async()=>{if(!window.confirm("Adicionar os produtos da lista padrão a esta lista, sem apagar os itens existentes?"))return;setImportando(true);try{const n=await importarListaPadrao();toast.success(n?`${n} produtos adicionados à lista.`:"Todos os produtos da lista padrão já estão presentes.");}catch{toast.error("Não foi possível carregar a lista padrão.");}finally{setImportando(false);}}}>{importando?"Carregando produtos...":"Carregar lista padrão do mês"}</Button></div>}
       {listaId && <BudgetCard />}
       {listaId && <div className="mt-4 grid grid-cols-2 gap-3">
         <Button asChild size="lg" className="h-14 rounded-2xl"><Link to="/adicionar"><Plus className="h-5 w-5" /> Adicionar</Link></Button>
