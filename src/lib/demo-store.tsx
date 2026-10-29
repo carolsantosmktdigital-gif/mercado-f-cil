@@ -78,7 +78,12 @@ const db = supabase as any;
 type Store = {
   conflitos: PendingWrite[];
   resolverConflito: (id: string, manterLocal: boolean) => Promise<void>;
-  compartilhamento: { connected: boolean; peers: number; peerPending: number };
+  compartilhamento: {
+    connected: boolean;
+    peers: number;
+    peerPending: number;
+    peerNames?: string[];
+  };
   categorias: string[];
   criarCategoria: (nome: string) => Promise<string>;
   analises: PurchaseAnalysis[];

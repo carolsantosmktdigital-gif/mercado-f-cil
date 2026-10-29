@@ -1,3 +1,4 @@
+import { getPersonName, personName, subscribePreferences } from "./preferences";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,12 +51,14 @@ export function useSharedShopping(
   );
   const [connected, setConnected] = useState(false),
     [peers, setPeers] = useState(0),
-    [peerPending, setPeerPending] = useState(0);
+    [peerPending, setPeerPending] = useState(0),
+    [peerNames, setPeerNames] = useState<string[]>([]);
   const report = () => {
     const channel = channelRef.current;
     if (!channel) return;
     void channel.track({
       device: device.current,
+      name: getPersonName(),
       lista: listRef.current,
       pending: localPending(),
     });
@@ -66,6 +69,7 @@ export function useSharedShopping(
       (p) => p.device !== device.current && p.lista === listRef.current,
     );
     return {
+      names: others.map((p) => personName(p.name) || "Pessoa sem nome"),
       count: others.length,
       pending: others.reduce((sum, p) => sum + Number(p.pending || 0), 0),
     };
@@ -91,6 +95,7 @@ export function useSharedShopping(
       draft.current = (event as CustomEvent).detail;
       report();
     };
+    const unsubscribePreferences = subscribePreferences(report);
     window.addEventListener("mercado-shopping-draft", onDraft);
     window.addEventListener("online", focus);
     window.addEventListener("focus", focus);
@@ -113,6 +118,7 @@ export function useSharedShopping(
         );
       channel.on("presence", { event: "sync" }, () => {
         const p = inspect();
+        setPeerNames(p.names);
         setPeers(p.count);
         setPeerPending(p.pending);
       });
@@ -152,6 +158,7 @@ export function useSharedShopping(
       });
     }
     return () => {
+      unsubscribePreferences();
       clearInterval(poll);
       clearTimeout(timer);
       window.removeEventListener("mercado-shopping-draft", onDraft);
@@ -165,6 +172,7 @@ export function useSharedShopping(
   useEffect(() => {
     report();
     const p = inspect();
+    setPeerNames(p.names);
     setPeers(p.count);
     setPeerPending(p.pending);
   }, [list, pending]);
@@ -220,5 +228,5 @@ export function useSharedShopping(
         "O outro celular ainda tem alterações pendentes. Aguarde a sincronização antes de finalizar.",
       );
   }
-  return { connected, peers, peerPending, checkPeers };
+  return { connected, peers, peerPending, peerNames, checkPeers };
 }

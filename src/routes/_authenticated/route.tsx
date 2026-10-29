@@ -1,3 +1,4 @@
+import { ThemeChoice } from "@/components/PersonalPreferences";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -150,6 +151,9 @@ function FamiliaSetup({ userId }: { userId: string }) {
 
   return (
     <div className="mx-auto max-w-md space-y-6 px-5 py-10">
+      <div className="flex justify-end">
+        <ThemeChoice />
+      </div>
       <div>
         <h1 className="text-3xl font-extrabold">Sua família</h1>
         <p className="mt-1 text-muted-foreground">

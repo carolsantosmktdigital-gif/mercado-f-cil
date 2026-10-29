@@ -1,3 +1,4 @@
+import { ThemeChoice } from "@/components/PersonalPreferences";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
@@ -31,7 +32,10 @@ export function Page({
           {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           <h1 className="text-3xl font-extrabold">{title}</h1>
         </div>
-        {action}
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <ThemeChoice />
+          {action}
+        </div>
       </header>
       <div className="px-5">
         <SyncStatus />
@@ -86,12 +90,16 @@ function SyncStatus() {
   return (
     <div className="mb-4 space-y-2">
       {online && compartilhamento && (
-        <p role="status" className="rounded-xl bg-emerald-50 p-3 text-xs text-emerald-950">
+        <p
+          role="status"
+          className="break-words rounded-xl bg-emerald-50 p-3 text-xs text-emerald-950"
+        >
           {compartilhamento.connected
             ? "Lista conectada · atualizações automáticas"
             : "Reconectando · conferindo alterações a cada 3 segundos"}
-          {compartilhamento.peers > 0 &&
-            ` · ${compartilhamento.peers} outro(s) celular(es) nesta lista`}
+          {(compartilhamento.peerNames?.length ?? 0) > 0
+            ? ` · Nesta lista com você: ${compartilhamento.peerNames!.join(", ")}`
+            : compartilhamento.peers > 0 && ` · ${compartilhamento.peers} pessoa(s) nesta lista`}
           {compartilhamento.peerPending > 0 && " · aguardando alterações do outro celular"}
         </p>
       )}

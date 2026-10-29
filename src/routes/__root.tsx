@@ -1,3 +1,4 @@
+import { ThemeInitializer } from "@/components/PersonalPreferences";
 import { AppUpdateNotice } from "@/components/AppUpdateNotice";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -97,8 +98,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{const dark=localStorage.getItem('mercado-facil-theme')==='dark';document.documentElement.classList.toggle('dark',dark);document.documentElement.style.colorScheme=dark?'dark':'light'}catch{}`,
+          }}
+        />
         <HeadContent />
       </head>
       <body>
@@ -138,6 +144,7 @@ function RootComponent() {
   }, [router, queryClient]);
   return (
     <QueryClientProvider client={queryClient}>
+      <ThemeInitializer />
       <AppUpdateNotice />
       <Outlet />
       <Toaster position="top-center" />

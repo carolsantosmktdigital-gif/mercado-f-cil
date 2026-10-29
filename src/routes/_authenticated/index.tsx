@@ -1,3 +1,5 @@
+import { PersonNameForm } from "@/components/PersonalPreferences";
+import { usePersonName } from "@/lib/preferences";
 import { ManualListForm } from "@/components/ManualListForm";
 import { DeleteListButton } from "@/components/DeleteListButton";
 import { InstallApp } from "@/components/InstallApp";
@@ -29,6 +31,7 @@ export const Route = createFileRoute("/_authenticated/")({
 });
 
 function Inicio() {
+  const person = usePersonName();
   const { cartoes, itens, familia, listas, listaId, selecionarLista } = useDemo();
   const [abrirNovaLista, setAbrirNovaLista] = useState(false);
   useEffect(() => {
@@ -50,7 +53,11 @@ function Inicio() {
   const total = cartoes.reduce((s, c) => s + c.saldo, 0);
   const pendentes = itens.filter((i) => !i.comprado).length;
   return (
-    <Page title="Mercado Fácil" subtitle="Olá! Boas compras 🛒">
+    <Page
+      title="Mercado Fácil"
+      subtitle={person ? `Olá, ${person}! Boas compras 🛒` : "Olá! Boas compras 🛒"}
+    >
+      <PersonNameForm />
       <InstallApp />
       <section className="mb-4 mt-5 flex items-center justify-between rounded-3xl bg-accent p-4 text-accent-foreground">
         <div>
