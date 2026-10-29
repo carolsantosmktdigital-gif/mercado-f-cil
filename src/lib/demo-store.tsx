@@ -10,6 +10,7 @@ import {
   flushWrites,
   type PendingWrite,
 } from "./offline";
+import type { PurchaseAnalysis } from "./analysis";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -60,6 +61,9 @@ export const totalItem = (i: ItemLista) =>
 const db = supabase as any;
 
 type Store = {
+  analises: PurchaseAnalysis[];
+  analisesLoading: boolean;
+  analisesError: boolean;
   pendingCount: number;
   syncError: string;
   online: boolean;
@@ -201,7 +205,7 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       setSyncError("");
       if (hadFinalization && !readLocal(fid).pending.length) {
         await Promise.all(
-          ["cartoes", "listas", "itens", "compras", "produtos"].map((key) =>
+          ["cartoes", "listas", "itens", "compras", "produtos", "analises"].map((key) =>
             qc.invalidateQueries({ queryKey: [key, fid] }),
           ),
         );
@@ -338,6 +342,19 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       }));
     },
   });
+  const analisesQ = useLocalQuery<PurchaseAnalysis[]>(fid, {
+    queryKey: ["analises", fid],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("analises_compras")
+        .select("id,lista_anterior_nome,lista_atual_nome,data_anterior,data_atual,itens")
+        .eq("familia_id", fid)
+        .order("data_atual", { ascending: false })
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as PurchaseAnalysis[];
+    },
+  });
   const itens = itensQ.data || [];
   const refresh = async (...keys: string[]) => {
     await Promise.all(keys.map((k) => qc.invalidateQueries({ queryKey: [k, fid] })));
@@ -353,6 +370,9 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
     void syncPending();
   }
   const store: Store = {
+    analises: analisesQ.data || [],
+    analisesLoading: analisesQ.isPending,
+    analisesError: analisesQ.isError,
     pendingCount,
     syncError,
     online,
