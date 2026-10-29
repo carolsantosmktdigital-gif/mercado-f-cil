@@ -11,7 +11,11 @@ afterEach(() => {
 });
 it("revisa, ajusta e exclui produtos antes de criar somente a nova lista", async () => {
   render(<ShoppingListBuilder />);
-  fireEvent.click(screen.getByRole("button", { name: "Casal com filhos" }));
+  fireEvent.click(screen.getByRole("button", { name: "Gerar lista automática" }));
+  fireEvent.change(screen.getByLabelText("Para quantas pessoas será a compra?"), {
+    target: { value: "3" },
+  });
+  fireEvent.change(screen.getByLabelText("Crianças"), { target: { value: "1" } });
   expect(screen.getByLabelText("Crianças")).toHaveValue(1);
   fireEvent.click(screen.getByRole("button", { name: "Montar lista sugerida" }));
   expect(screen.getByText("Crianças")).toBeInTheDocument();

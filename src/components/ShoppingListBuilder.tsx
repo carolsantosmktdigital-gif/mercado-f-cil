@@ -42,27 +42,19 @@ export function ShoppingListBuilder() {
     <section className="mt-5 rounded-2xl bg-card p-4 shadow-soft">
       <h2 className="font-bold">Lista pronta para sua família</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Comece com um modelo e personalize sua compra.
+        Informe as pessoas, o período e as refeições para montar sua lista.
       </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {["Casal", "Casal com filhos"].map((label, i) => (
-          <Button
-            key={label}
-            disabled={busy}
-            variant="outline"
-            onClick={() => {
-              setOpen(true);
-              setItems(null);
-              setAdultos(2);
-              setCriancas(i);
-              setTotal(2 + i);
-              setNome(label);
-            }}
-          >
-            {label}
-          </Button>
-        ))}
-      </div>
+      <Button
+        className="mt-3 w-full"
+        disabled={busy}
+        onClick={() => {
+          setOpen(true);
+          setItems(null);
+          setNome("Minha lista de compras");
+        }}
+      >
+        Gerar lista automática
+      </Button>
       {open && (
         <div className="mt-4 space-y-4">
           {!items ? (

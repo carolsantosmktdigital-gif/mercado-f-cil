@@ -123,8 +123,8 @@ function Inicio() {
         </div>
         {!listas.length && !abrirNovaLista && (
           <p className="mt-3 text-sm text-muted-foreground">
-            Você ainda não tem uma lista de compras. Use um modelo acima ou toque em Nova lista para
-            começar.
+            Você ainda não tem uma lista de compras. Gere uma lista automática acima ou toque em
+            Nova lista para começar.
           </p>
         )}
         {abrirNovaLista && cartoes.length === 0 && (

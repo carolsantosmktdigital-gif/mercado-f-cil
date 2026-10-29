@@ -353,8 +353,8 @@ function Lista() {
         <section className="mb-4 space-y-3 rounded-3xl bg-card p-5 shadow-soft">
           <h2 className="text-lg font-bold">Crie sua lista de compras</h2>
           <p className="text-sm text-muted-foreground">
-            Você ainda não tem listas cadastradas. Crie uma lista do seu jeito ou use um modelo
-            personalizado para sua família.
+            Você ainda não tem listas cadastradas. Crie uma lista do seu jeito ou gere uma lista
+            automática para sua família.
           </p>
           <Button asChild className="w-full">
             <Link to="/" hash="nova-lista">
