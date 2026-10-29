@@ -10,6 +10,7 @@ import {
   flushWrites,
   type PendingWrite,
 } from "./offline";
+import { historyTotal, validateHistoryItems, type HistoryItem } from "./history";
 import type { PurchaseAnalysis } from "./analysis";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +44,12 @@ export type Compra = {
   total: number;
   itens: number;
   pendente?: boolean;
+  produtos?: HistoryItem[];
+  listaId?: string;
+  listaNome?: string;
+  cartaoId?: string;
+  revisao?: number;
+  finalizacaoId?: string;
 };
 export type Familia = { id: string; nome: string; codigo: string };
 export type ListaCompras = {
@@ -91,6 +98,7 @@ type Store = {
   ) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   importarListaPadrao: () => Promise<number>;
+  editarCompra: (compra: Compra, produtos: HistoryItem[]) => Promise<void>;
   finalizarCompra: () => Promise<void>;
 };
 const Ctx = createContext<Store | null>(null);
@@ -110,7 +118,7 @@ function useLocalQuery<T>(
     queryFn: async () => {
       const pending = readLocal(fid).pending;
       // Keep the already discounted local snapshot until finalizations are acknowledged.
-      if (pending.some((p) => p.kind === "finalize")) {
+      if (pending.some((p) => p.kind === "finalize" || p.kind === "history")) {
         const snapshot = cached<T>(fid, options.queryKey);
         if (snapshot !== undefined) return snapshot;
       }
@@ -134,7 +142,9 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
   const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
   async function syncPending() {
     try {
-      const hadFinalization = readLocal(fid).pending.some((op) => op.kind === "finalize");
+      const hadFinalization = readLocal(fid).pending.some(
+        (op) => op.kind === "finalize" || op.kind === "history",
+      );
       await flushWrites(fid, async (op: PendingWrite) => {
         if (op.kind === "finalize") {
           const { error } = await db.rpc("finalizar_compra_offline", {
@@ -144,6 +154,17 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
             _total_previsto: op.values["total"],
             _qtd_prevista: op.values["quantidade"],
             _data_compra: op.values["data"],
+          });
+          if (error) throw error;
+          return;
+        }
+        if (op.kind === "history") {
+          const { error } = await db.rpc("editar_itens_compra", {
+            _compra_id: op.values["compraId"],
+            _operacao_id: op.id,
+            _revisao_esperada: op.values["revisao"],
+            _itens: op.values["produtos"],
+            _finalizacao_id: op.values["finalizacaoId"] || null,
           });
           if (error) throw error;
           return;
@@ -329,7 +350,7 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
     queryFn: async () => {
       const { data, error } = await db
         .from("compras")
-        .select("*")
+        .select("*, listas_compras(nome), compra_itens(id,nome,setor,qtd,preco_unitario)")
         .eq("familia_id", fid)
         .order("created_at", { ascending: false });
       check(error);
@@ -339,6 +360,17 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
         cartao: r.cartao,
         total: Number(r.total),
         itens: r.itens,
+        listaId: r.lista_id,
+        listaNome: r.listas_compras?.nome || "Compra",
+        cartaoId: r.cartao_id,
+        revisao: Number(r.revisao_itens || 0),
+        produtos: (r.compra_itens || []).map((i: any) => ({
+          id: i.id,
+          nome: i.nome,
+          setor: i.setor,
+          qtd: Number(i.qtd),
+          preco: Number(i.preco_unitario),
+        })),
       }));
     },
   });
@@ -386,7 +418,21 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
     },
     itens,
     catalogo: catQ.data || [],
-    historico: histQ.data || [],
+    historico: (histQ.data || []).map((h) => {
+      if (h.produtos) return h;
+      const pending = readLocal(fid).pending.find((op) => op.kind === "finalize" && op.id === h.id);
+      if (!pending) return h;
+      const savedList = pending.values["lista"] as ListaCompras | undefined;
+      return {
+        ...h,
+        produtos: pending.values["produtos"] as HistoryItem[],
+        listaId: pending.listaId,
+        listaNome: savedList?.nome || "Compra",
+        cartaoId: savedList?.cartao_id || "",
+        revisao: 0,
+        finalizacaoId: pending.id,
+      };
+    }),
     orcamento: lista?.orcamento || 0,
     cartaoCompraId: lista?.cartao_id || "",
     addCartao: async (nome, saldo, destinado = 0) => {
@@ -653,6 +699,57 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       await refresh("itens");
       return novos.length;
     },
+    editarCompra: async (compra, produtos) => {
+      validateHistoryItems(produtos);
+      const history = qc.getQueryData<Compra[]>(["compras", fid]) || [];
+      const current = history.find(
+        (h) => h.id === compra.id || (compra.listaId && h.listaId === compra.listaId),
+      );
+      if (!current) throw new Error("Compra não encontrada. Abra o histórico novamente.");
+      if ((current.revisao || 0) !== (compra.revisao || 0))
+        throw new Error("Esta compra foi atualizada. Reabra os detalhes antes de editar.");
+      const total = historyTotal(produtos),
+        delta = Math.round((total - current.total) * 100) / 100;
+      const cards = qc.getQueryData<Cartao[]>(["cartoes", fid]) || [];
+      const cartaoId = current.cartaoId || compra.cartaoId;
+      const card = cards.find((c) => c.id === cartaoId);
+      if (card && card.saldo - delta < 0)
+        throw new Error("Saldo do cartão insuficiente para aumentar o valor desta compra.");
+      const updated = {
+        ...compra,
+        ...current,
+        produtos: produtos.map((p) => ({ ...p, nome: p.nome.trim() })),
+        total,
+        itens: produtos.length,
+        revisao: (current.revisao || 0) + 1,
+        pendente: true,
+      };
+      const op: PendingWrite = {
+        id: crypto.randomUUID(),
+        listaId: current.listaId || compra.listaId || current.id,
+        itemId: current.id,
+        kind: "history",
+        values: {
+          compraId: current.id,
+          finalizacaoId: current.finalizacaoId || compra.finalizacaoId,
+          revisao: current.revisao || 0,
+          produtos: updated.produtos,
+        },
+      };
+      const entries = [
+        { key: ["compras", fid], value: history.map((h) => (h.id === current.id ? updated : h)) },
+        {
+          key: ["cartoes", fid],
+          value: cards.map((c) =>
+            c.id === cartaoId ? { ...c, saldo: Math.round((c.saldo - delta) * 100) / 100 } : c,
+          ),
+        },
+      ];
+      for (const entry of entries) void qc.cancelQueries({ queryKey: entry.key });
+      enqueueFinalization(fid, op, entries);
+      for (const entry of entries) qc.setQueryData(entry.key, entry.value);
+      void syncPending();
+    },
     finalizarCompra: async () => {
       const currentLists = qc.getQueryData<ListaCompras[]>(["listas", fid]) || [];
       const currentList = currentLists.find((l) => l.id === listaId);
@@ -720,7 +817,20 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
         {
           key: ["compras", fid],
           value: [
-            { id, data, cartao: card.nome, total, itens: purchased.length, pendente: true },
+            {
+              id,
+              data,
+              cartao: card.nome,
+              total,
+              itens: purchased.length,
+              pendente: true,
+              produtos: purchased,
+              listaId,
+              listaNome: currentList.nome,
+              cartaoId: card.id,
+              revisao: 0,
+              finalizacaoId: id,
+            },
             ...history,
           ],
         },

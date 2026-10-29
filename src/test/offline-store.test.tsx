@@ -169,3 +169,91 @@ it("retries a lost finalization response without subtracting the local card twic
   expect(rpc.mock.calls[0]).toEqual(rpc.mock.calls[1]);
   expect(rpc.mock.calls[0]?.[0]).toBe("finalizar_compra_offline");
 });
+
+it("edits only the selected history receipt offline and restores its corrected card balance", async () => {
+  const purchase = {
+    id: "purchase-one",
+    data: "2026-10-29",
+    cartao: "Card",
+    cartaoId: "c1",
+    listaId: "old-list",
+    listaNome: "Outubro",
+    total: 20,
+    itens: 1,
+    revisao: 0,
+    produtos: [{ id: "old-rice", nome: "Arroz", setor: "Mercearia", qtd: 2, preco: 10 }],
+  };
+  const other = {
+    ...purchase,
+    id: "purchase-two",
+    listaId: "another-list",
+    listaNome: "Outra compra",
+  };
+  saveCache("f1", ["compras", "f1"], [purchase, other]);
+  const hook = renderHook(() => useDemo(), { wrapper });
+  await act(async () => {
+    await hook.result.current.editarCompra(purchase, [{ ...purchase.produtos[0]!, preco: 12 }]);
+  });
+  await waitFor(() => expect(hook.result.current.historico[0]?.total).toBe(24));
+  expect(hook.result.current.historico[1]).toEqual(other);
+  expect(hook.result.current.cartoes[0]?.saldo).toBe(96);
+  expect(hook.result.current.itens.map((i) => i.nome)).toEqual(["Arroz", "Feijão"]);
+  expect(readLocal("f1").pending.at(-1)).toMatchObject({
+    kind: "history",
+    values: { compraId: "purchase-one", revisao: 0 },
+  });
+  await expect(hook.result.current.editarCompra(purchase, purchase.produtos)).rejects.toThrow(
+    "atualizada",
+  );
+  hook.unmount();
+  client.clear();
+  const reopened = renderHook(() => useDemo(), { wrapper });
+  expect(reopened.result.current.historico[0]?.produtos?.[0]?.preco).toBe(12);
+  expect(reopened.result.current.cartoes[0]?.saldo).toBe(96);
+  const updated = reopened.result.current.historico[0]!;
+  await act(async () => {
+    await reopened.result.current.editarCompra(updated, [{ ...purchase.produtos[0]!, preco: 8 }]);
+  });
+  await waitFor(() => expect(reopened.result.current.cartoes[0]?.saldo).toBe(104));
+});
+
+it("allows correcting an offline purchase before its first synchronization", async () => {
+  const hook = renderHook(() => useDemo(), { wrapper });
+  await act(async () => {
+    await hook.result.current.updateItem("rice", { preco: 35 });
+    await hook.result.current.toggleItem("rice");
+    await hook.result.current.finalizarCompra();
+  });
+  await waitFor(() => expect(hook.result.current.historico[0]?.produtos?.[0]?.preco).toBe(35));
+  const purchase = hook.result.current.historico[0]!;
+  await act(async () => {
+    await hook.result.current.editarCompra(purchase, [{ ...purchase.produtos![0]!, preco: 30 }]);
+  });
+  await waitFor(() => expect(hook.result.current.cartoes[0]?.saldo).toBe(40));
+  expect(readLocal("f1").pending.map((p) => p.kind)).toEqual([
+    "update",
+    "update",
+    "finalize",
+    "history",
+  ]);
+  expect(readLocal("f1").pending.at(-1)?.values["finalizacaoId"]).toBe(purchase.id);
+});
+
+it("does not enqueue an unaffordable receipt correction", async () => {
+  const purchase = {
+    id: "p",
+    data: "2026-10-29",
+    cartao: "Card",
+    cartaoId: "c1",
+    total: 20,
+    itens: 1,
+    produtos: [{ id: "i", nome: "Arroz", setor: "Mercearia", qtd: 1, preco: 20 }],
+  };
+  saveCache("f1", ["compras", "f1"], [purchase]);
+  const hook = renderHook(() => useDemo(), { wrapper });
+  await expect(
+    hook.result.current.editarCompra(purchase, [{ ...purchase.produtos[0]!, preco: 200 }]),
+  ).rejects.toThrow("Saldo do cartão insuficiente");
+  expect(readLocal("f1").pending).toHaveLength(0);
+  expect(hook.result.current.cartoes[0]?.saldo).toBe(100);
+});
