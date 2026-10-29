@@ -24,17 +24,28 @@ function Historico() {
         <p className="text-sm opacity-80">Total gasto nas últimas {historico.length} compras</p>
         <p className="font-display text-3xl font-extrabold">{brl(total)}</p>
       </div>
-      {historico.length === 0 && <p className="mt-10 text-center text-muted-foreground">Nenhuma compra finalizada ainda.</p>}
+      {historico.length === 0 && (
+        <p className="mt-10 text-center text-muted-foreground">Nenhuma compra finalizada ainda.</p>
+      )}
       <ul className="mt-6 space-y-3">
         {historico.map((h) => (
           <li key={h.id} className="rounded-3xl bg-card p-5 shadow-soft">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 font-semibold">
                 <CalendarDays className="h-5 w-5 text-primary" />
-                {new Date(h.data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                {new Date(h.data + "T12:00:00").toLocaleDateString("pt-BR", {
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric",
+                })}
               </span>
               <span className="font-display text-xl font-extrabold">{brl(h.total)}</span>
             </div>
+            {h.pendente && (
+              <p className="mt-2 text-sm font-semibold text-amber-800">
+                Saldo descontado · Aguardando sincronização
+              </p>
+            )}
             <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
               <CreditCard className="h-4 w-4" /> {h.cartao} · {h.itens} itens
             </p>

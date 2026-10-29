@@ -5,6 +5,7 @@ import {
   saveCache,
   readLocal,
   enqueue,
+  enqueueFinalization,
   overlayItems,
   flushWrites,
   type PendingWrite,
@@ -34,7 +35,14 @@ export type ItemLista = {
   inesperado?: boolean;
 };
 export type ProdutoCatalogo = { id: string; nome: string; setor: Setor; precoRef: number };
-export type Compra = { id: string; data: string; cartao: string; total: number; itens: number };
+export type Compra = {
+  id: string;
+  data: string;
+  cartao: string;
+  total: number;
+  itens: number;
+  pendente?: boolean;
+};
 export type Familia = { id: string; nome: string; codigo: string };
 export type ListaCompras = {
   id: string;
@@ -96,10 +104,16 @@ function useLocalQuery<T>(
     ...options,
     initialData: () => cached<T>(fid, options.queryKey),
     queryFn: async () => {
-      const before = JSON.stringify(readLocal(fid).pending);
+      const pending = readLocal(fid).pending;
+      // Keep the already discounted local snapshot until finalizations are acknowledged.
+      if (pending.some((p) => p.kind === "finalize")) {
+        const snapshot = cached<T>(fid, options.queryKey);
+        if (snapshot !== undefined) return snapshot;
+      }
+      const before = JSON.stringify(pending);
       const result = await options.queryFn();
       // A response started before a local edit or acknowledgement must not erase it.
-      if (options.queryKey[0] === "itens" && before !== JSON.stringify(readLocal(fid).pending)) {
+      if (before !== JSON.stringify(readLocal(fid).pending)) {
         return cached<T>(fid, options.queryKey) ?? result;
       }
       return saveCache(fid, options.queryKey, result);
@@ -116,7 +130,20 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
   const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
   async function syncPending() {
     try {
+      const hadFinalization = readLocal(fid).pending.some((op) => op.kind === "finalize");
       await flushWrites(fid, async (op: PendingWrite) => {
+        if (op.kind === "finalize") {
+          const { error } = await db.rpc("finalizar_compra_offline", {
+            _lista_id: op.listaId,
+            _operacao_id: op.id,
+            _pendencias_id: op.values["pendenciasId"],
+            _total_previsto: op.values["total"],
+            _qtd_prevista: op.values["quantidade"],
+            _data_compra: op.values["data"],
+          });
+          if (error) throw error;
+          return;
+        }
         let request;
         if (op.kind === "insert")
           request = db
@@ -160,22 +187,28 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
               .limit(1);
             if (lookupError) throw lookupError;
             if (!existing?.length) {
-              const { error: catalogError } = await db
-                .from("produtos")
-                .insert({
-                  familia_id: fid,
-                  nome: op.values["nome"],
-                  setor: op.values["setor"],
-                  preco_ref: op.values["preco"],
-                });
+              const { error: catalogError } = await db.from("produtos").insert({
+                familia_id: fid,
+                nome: op.values["nome"],
+                setor: op.values["setor"],
+                preco_ref: op.values["preco"],
+              });
               if (catalogError && catalogError.code !== "23505") throw catalogError;
             }
           }
         }
       });
       setSyncError("");
-    } catch {
-      setSyncError("Alterações salvas neste celular. Aguardando sincronização.");
+      if (hadFinalization && !readLocal(fid).pending.length) {
+        await Promise.all(
+          ["cartoes", "listas", "itens", "compras", "produtos"].map((key) =>
+            qc.invalidateQueries({ queryKey: [key, fid] }),
+          ),
+        );
+      }
+    } catch (error) {
+      const message = (error as { message?: string })?.message || "Aguardando conexão.";
+      setSyncError("Alterações salvas neste celular. Sincronização pendente: " + message);
     }
   }
   useEffect(() => {
@@ -353,17 +386,15 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
         .single();
       check(error);
       if (destinado > 0) {
-        const { error: listaError } = await db
-          .from("listas_compras")
-          .insert({
-            familia_id: fid,
-            cartao_id: data.id,
-            nome: "Compra do mês",
-            orcamento: destinado,
-            valor_reservado: 0,
-            status: "em_andamento",
-            tipo: "normal",
-          });
+        const { error: listaError } = await db.from("listas_compras").insert({
+          familia_id: fid,
+          cartao_id: data.id,
+          nome: "Compra do mês",
+          orcamento: destinado,
+          valor_reservado: 0,
+          status: "em_andamento",
+          tipo: "normal",
+        });
         check(listaError);
       }
       await refresh("cartoes", "listas");
@@ -400,17 +431,15 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
           .eq("familia_id", fid);
         check(err);
       } else if (destinado > 0) {
-        const { error: err } = await db
-          .from("listas_compras")
-          .insert({
-            familia_id: fid,
-            cartao_id: id,
-            nome: "Compra do mês",
-            orcamento: destinado,
-            valor_reservado: 0,
-            status: "em_andamento",
-            tipo: "normal",
-          });
+        const { error: err } = await db.from("listas_compras").insert({
+          familia_id: fid,
+          cartao_id: id,
+          nome: "Compra do mês",
+          orcamento: destinado,
+          valor_reservado: 0,
+          status: "em_andamento",
+          tipo: "normal",
+        });
         check(err);
       }
       await refresh("cartoes", "listas");
@@ -588,45 +617,103 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       const existentes = new Set(itens.map((i) => i.nome.trim().toLocaleLowerCase("pt-BR")));
       const novos = padrao.filter((p) => !existentes.has(p.nome.trim().toLocaleLowerCase("pt-BR")));
       if (!novos.length) return 0;
-      const { error } = await db
-        .from("itens_lista")
-        .insert(
-          novos.map((p) => ({
-            familia_id: fid,
-            lista_id: listaId,
-            nome: p.nome,
-            setor: p.setor,
-            qtd: p.qtd,
-            preco: null,
-            comprado: false,
-            inesperado: false,
-          })),
-        );
+      const { error } = await db.from("itens_lista").insert(
+        novos.map((p) => ({
+          familia_id: fid,
+          lista_id: listaId,
+          nome: p.nome,
+          setor: p.setor,
+          qtd: p.qtd,
+          preco: null,
+          comprado: false,
+          inesperado: false,
+        })),
+      );
       check(error);
       await refresh("itens");
       return novos.length;
     },
     finalizarCompra: async () => {
-      await syncPending();
-      if (!navigator.onLine || readLocal(fid).pending.length) {
-        toast.error(
-          "Conecte-se à internet para sincronizar os itens e finalizar. Sua compra está salva neste celular.",
-        );
-        return;
-      }
-      if (!listaId) {
-        toast.error("Selecione uma lista.");
-        return;
-      }
-      if (!itens.some((i) => i.comprado)) {
-        toast.error("Marque pelo menos um produto comprado.");
-        return;
-      }
-      const { error } = await db.rpc("finalizar_compra", { _lista_id: listaId });
-      check(error);
-      setSelectedId("");
-      await refresh("cartoes", "listas", "itens", "compras");
-      toast.success("Compra finalizada! Saldo e histórico atualizados.");
+      const currentLists = qc.getQueryData<ListaCompras[]>(["listas", fid]) || [];
+      const currentList = currentLists.find((l) => l.id === listaId);
+      if (!currentList) throw new Error("Esta lista já foi finalizada ou não está disponível.");
+      const currentItems = qc.getQueryData<ItemLista[]>(["itens", fid, listaId]) || [];
+      const purchased = currentItems.filter((i) => i.comprado),
+        remaining = currentItems.filter((i) => !i.comprado);
+      if (!purchased.length) throw new Error("Marque pelo menos um produto comprado.");
+      if (
+        purchased.some(
+          (i) => !Number.isFinite(i.preco) || i.preco <= 0 || !Number.isFinite(i.qtd) || i.qtd <= 0,
+        )
+      )
+        throw new Error("Confira os preços e quantidades dos produtos comprados.");
+      const total = Math.round(purchased.reduce((sum, i) => sum + totalItem(i), 0) * 100) / 100;
+      const cards = qc.getQueryData<Cartao[]>(["cartoes", fid]) || [];
+      const card = cards.find((c) => c.id === currentList.cartao_id);
+      if (!card) throw new Error("Cartão não encontrado.");
+      if (total > currentList.orcamento) throw new Error("Compra acima do orçamento definido.");
+      if (
+        total > card.saldo - currentList.valor_reservado ||
+        currentList.orcamento > card.saldo - currentList.valor_reservado
+      )
+        throw new Error("A compra comprometeria o saldo disponível ou a reserva.");
+      const id = crypto.randomUUID(),
+        pendenciasId = crypto.randomUUID();
+      const now = new Date();
+      const data = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const op: PendingWrite = {
+        id,
+        listaId,
+        itemId: listaId,
+        kind: "finalize",
+        values: {
+          total,
+          quantidade: purchased.length,
+          pendenciasId,
+          data,
+          produtos: purchased,
+          lista: currentList,
+          cartao: card.nome,
+        },
+      };
+      const nextLists = currentLists.filter((l) => l.id !== listaId);
+      if (remaining.length)
+        nextLists.unshift({
+          ...currentList,
+          id: pendenciasId,
+          nome: "Pendências - " + currentList.nome,
+          orcamento: 0,
+          valor_reservado: 0,
+          tipo: "pendencias",
+        });
+      const history = qc.getQueryData<Compra[]>(["compras", fid]) || [];
+      const entries = [
+        {
+          key: ["cartoes", fid],
+          value: cards.map((c) =>
+            c.id === card.id ? { ...c, saldo: Math.round((c.saldo - total) * 100) / 100 } : c,
+          ),
+        },
+        { key: ["listas", fid], value: nextLists },
+        { key: ["itens", fid, listaId], value: [] },
+        { key: ["itens", fid, pendenciasId], value: remaining },
+        {
+          key: ["compras", fid],
+          value: [
+            { id, data, cartao: card.nome, total, itens: purchased.length, pendente: true },
+            ...history,
+          ],
+        },
+        { key: ["selected"], value: remaining.length ? pendenciasId : "" },
+      ];
+      // Cancel stale reads before applying one atomic, durable local transaction.
+      for (const entry of entries) void qc.cancelQueries({ queryKey: entry.key });
+      enqueueFinalization(fid, op, entries);
+      for (const entry of entries)
+        if (entry.key[0] !== "selected") qc.setQueryData(entry.key, entry.value);
+      setSelectedId(remaining.length ? pendenciasId : "");
+      toast.success("Compra finalizada! Saldo descontado neste celular. Aguardando sincronização.");
+      void syncPending();
     },
   };
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;

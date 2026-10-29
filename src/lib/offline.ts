@@ -3,7 +3,7 @@ export type PendingWrite = {
   id: string;
   listaId: string;
   itemId: string;
-  kind: "insert" | "update" | "delete";
+  kind: "insert" | "update" | "delete" | "finalize";
   values: Record<string, unknown>;
 };
 type LocalData = { cache: Record<string, unknown>; pending: PendingWrite[] };
@@ -40,6 +40,7 @@ export function overlayItems<T extends { id: string }>(
 ): T[] {
   let result = [...items];
   for (const op of pending.filter((p) => p.listaId === listaId)) {
+    if (op.kind === "finalize") continue;
     if (op.kind === "delete") result = result.filter((i) => i.id !== op.itemId);
     else if (op.kind === "insert" && !result.some((i) => i.id === op.itemId))
       result.push({ id: op.itemId, ...op.values } as T);
@@ -56,6 +57,20 @@ export function enqueue(
   const data = readLocal(family);
   data.pending.push(op);
   data.cache[JSON.stringify(key)] = items;
+  writeLocal(family, data);
+  window.dispatchEvent(new Event("mercado-offline-change"));
+}
+// Persist the receipt, card balance, list changes and queued finalization together.
+export function enqueueFinalization(
+  family: string,
+  op: PendingWrite,
+  entries: { key: readonly unknown[]; value: unknown }[],
+) {
+  const data = readLocal(family);
+  if (data.pending.some((p) => p.kind === "finalize" && p.listaId === op.listaId))
+    throw new Error("Esta compra já foi finalizada neste celular.");
+  data.pending.push(op);
+  for (const entry of entries) data.cache[JSON.stringify(entry.key)] = entry.value;
   writeLocal(family, data);
   window.dispatchEvent(new Event("mercado-offline-change"));
 }

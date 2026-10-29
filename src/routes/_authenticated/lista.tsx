@@ -420,14 +420,6 @@ function Lista() {
         </div>
       )}
 
-      {(!online || pendingCount > 0 || syncError) && (
-        <p role="status" className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">
-          {!online
-            ? "Sem internet. Cálculos e alterações salvos neste celular."
-            : syncError || "Sincronizando alterações…"}{" "}
-          {pendingCount > 0 ? `${pendingCount} alteração(ões) aguardando sincronização.` : ""}
-        </p>
-      )}
       {listaId && (
         <div className="mt-3">
           <div className="grid grid-cols-2 gap-1 rounded-full border bg-muted/60 p-1 shadow-sm">
@@ -642,7 +634,13 @@ function Lista() {
           size="lg"
           className="mt-4 h-14 w-full rounded-2xl text-base"
           disabled={!itens.some((i) => i.comprado)}
-          onClick={() => finalizarCompra().catch(() => {})}
+          onClick={() =>
+            finalizarCompra().catch((error) =>
+              toast.error(
+                error instanceof Error ? error.message : "Não foi possível finalizar a compra.",
+              ),
+            )
+          }
         >
           Finalizar compra (itens marcados)
         </Button>

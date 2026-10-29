@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useDemo } from "@/lib/demo-store";
 import type { ReactNode } from "react";
 import { Home, CreditCard, ListChecks, History } from "lucide-react";
 
@@ -9,7 +10,17 @@ const tabs = [
   { to: "/historico", label: "Histórico", icon: History },
 ] as const;
 
-export function Page({ title, subtitle, action, children }: { title: string; subtitle?: string; action?: ReactNode; children: ReactNode }) {
+export function Page({
+  title,
+  subtitle,
+  action,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <div className="mx-auto min-h-screen max-w-md bg-background pb-28">
       <header className="flex items-end justify-between px-5 pb-4 pt-8">
@@ -19,7 +30,10 @@ export function Page({ title, subtitle, action, children }: { title: string; sub
         </div>
         {action}
       </header>
-      <div className="px-5">{children}</div>
+      <div className="px-5">
+        <SyncStatus />
+        {children}
+      </div>
     </div>
   );
 }
@@ -45,10 +59,28 @@ export function BottomNav() {
   );
 }
 
-export function DemoBadge({ texto = "Demonstração com dados fictícios — nada é salvo." }: { texto?: string }) {
+export function DemoBadge({
+  texto = "Demonstração com dados fictícios — nada é salvo.",
+}: {
+  texto?: string;
+}) {
   return (
     <p className="mb-4 rounded-xl bg-muted px-3 py-2 text-center text-xs text-muted-foreground">
       {texto}
+    </p>
+  );
+}
+
+function SyncStatus() {
+  const { online, pendingCount, syncError } = useDemo();
+  if (online && !pendingCount && !syncError) return null;
+  return (
+    <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">
+      {syncError ||
+        (!online
+          ? "Sem internet. Alterações e saldos ficam salvos neste celular."
+          : "Sincronizando alterações…")}{" "}
+      {pendingCount > 0 ? `${pendingCount} operação(ões) aguardando sincronização.` : ""}
     </p>
   );
 }

@@ -1,11 +1,13 @@
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { supabase } from "@/integrations/supabase/client";
 import { StoreProvider, totalItem, useDemo } from "../lib/demo-store";
 import { cached, readLocal, saveCache } from "../lib/offline";
 import type { ReactNode } from "react";
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
+    rpc: vi.fn(),
     from: vi.fn(() => {
       throw Error("No network in this test");
     }),
@@ -82,4 +84,88 @@ it("edits, totals, subtracts, undoes and restores a shopping session without int
   });
   await waitFor(() => expect(reopened.result.current.itens[0]?.comprado).toBe(false));
   expect(cached<any[]>("f1", ["itens", "f1", "l1"])?.[0].comprado).toBe(false);
+});
+
+it("finalizes offline, deducts the card once, persists history and moves remaining products", async () => {
+  saveCache(
+    "f1",
+    ["cartoes", "f1"],
+    [
+      { id: "c1", nome: "Card", saldo: 100, cor: "verde" },
+      { id: "other", nome: "Other", saldo: 500, cor: "claro" },
+    ],
+  );
+  const hook = renderHook(() => useDemo(), { wrapper });
+  await act(async () => {
+    await hook.result.current.updateItem("rice", { preco: 35 });
+    await hook.result.current.toggleItem("rice");
+  });
+  await act(async () => {
+    await hook.result.current.finalizarCompra();
+  });
+  await waitFor(() =>
+    expect(hook.result.current.cartoes.find((c) => c.id === "c1")?.saldo).toBe(30),
+  );
+  expect(hook.result.current.cartoes.find((c) => c.id === "other")?.saldo).toBe(500);
+  expect(hook.result.current.historico).toEqual([
+    expect.objectContaining({ total: 70, itens: 1, pendente: true }),
+  ]);
+  const pendingList = hook.result.current.listaId;
+  expect(pendingList).not.toBe("l1");
+  expect(hook.result.current.itens.map((i) => i.id)).toEqual(["beans"]);
+  expect(readLocal("f1").pending.map((op) => op.kind)).toEqual(["update", "update", "finalize"]);
+  await expect(hook.result.current.finalizarCompra()).rejects.toThrow("Marque pelo menos");
+  expect(readLocal("f1").pending.filter((op) => op.kind === "finalize")).toHaveLength(1);
+  hook.unmount();
+  client.clear();
+  const reopened = renderHook(() => useDemo(), { wrapper });
+  expect(reopened.result.current.cartoes.find((c) => c.id === "c1")?.saldo).toBe(30);
+  expect(reopened.result.current.historico[0]?.total).toBe(70);
+  expect(reopened.result.current.listaId).toBe(pendingList);
+  await act(async () => {
+    await reopened.result.current.updateItem("beans", { preco: 5 });
+  });
+  expect(readLocal("f1").pending.at(-1)?.listaId).toBe(pendingList);
+});
+
+it("rejects offline finalization above the budget without changing balances or history", async () => {
+  const hook = renderHook(() => useDemo(), { wrapper });
+  await act(async () => {
+    await hook.result.current.updateItem("rice", { preco: 60 });
+    await hook.result.current.toggleItem("rice");
+  });
+  await expect(hook.result.current.finalizarCompra()).rejects.toThrow("acima do orçamento");
+  expect(hook.result.current.cartoes[0]?.saldo).toBe(100);
+  expect(hook.result.current.historico).toEqual([]);
+  expect(readLocal("f1").pending.some((op) => op.kind === "finalize")).toBe(false);
+});
+
+it("retries a lost finalization response without subtracting the local card twice", async () => {
+  saveCache(
+    "f1",
+    ["itens", "f1", "l1"],
+    [{ id: "rice", nome: "Arroz", setor: "Mercearia", qtd: 2, preco: 35, comprado: true }],
+  );
+  const hook = renderHook(() => useDemo(), { wrapper });
+  await act(async () => {
+    await hook.result.current.finalizarCompra();
+  });
+  await waitFor(() => expect(hook.result.current.cartoes[0]?.saldo).toBe(30));
+  const rpc = vi.mocked(supabase.rpc);
+  rpc.mockResolvedValueOnce({ data: null, error: { message: "Network response lost" } } as any);
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+  await act(async () => {
+    window.dispatchEvent(new Event("online"));
+  });
+  await waitFor(() => expect(hook.result.current.syncError).toContain("Network response lost"));
+  expect(readLocal("f1").pending).toHaveLength(1);
+  expect(hook.result.current.cartoes[0]?.saldo).toBe(30);
+  rpc.mockResolvedValueOnce({ data: "server-purchase-id", error: null } as any);
+  await act(async () => {
+    window.dispatchEvent(new Event("online"));
+  });
+  await waitFor(() => expect(readLocal("f1").pending).toHaveLength(0));
+  expect(hook.result.current.cartoes[0]?.saldo).toBe(30);
+  expect(rpc.mock.calls[0]).toEqual(rpc.mock.calls[1]);
+  expect(rpc.mock.calls[0]?.[0]).toBe("finalizar_compra_offline");
 });
