@@ -67,6 +67,9 @@ export function BudgetCard() {
       <div className="mt-4 text-foreground">
         <BudgetEditor />
       </div>
+      <p className="mt-4 border-t border-current/20 pt-3 text-sm leading-relaxed">
+        O valor do item só entra no cálculo do orçamento quando você toca no ícone do carrinho.
+      </p>
     </section>
   );
 }

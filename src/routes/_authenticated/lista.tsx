@@ -542,6 +542,10 @@ function Lista() {
                 <BudgetAlert level={level} remaining={remaining} budget={budget} />
               </div>
             )}
+            <p className="mt-3 border-t border-current/20 pt-3 text-xs leading-relaxed">
+              O valor do item só entra no cálculo do orçamento quando você toca no ícone do
+              carrinho.
+            </p>
           </div>
         </div>
       )}
