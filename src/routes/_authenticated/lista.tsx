@@ -52,6 +52,7 @@ function Lista() {
     finalizarCompra,
     listas,
     listaId,
+    selecionarLista,
     renomearLista,
     pendingCount,
     syncError,
@@ -313,6 +314,38 @@ function Lista() {
       title="Lista de compras"
       subtitle={`${itens.filter((i) => i.comprado).length} de ${itens.length} no carrinho`}
     >
+      {listas.length > 1 && (
+        <section
+          aria-label="Alternar lista de compras"
+          className="mb-4 rounded-3xl bg-card p-4 shadow-soft"
+        >
+          <h2 className="mb-3 font-bold">Suas listas em andamento</h2>
+          <div className="flex flex-wrap gap-2">
+            {listas.map((lista) => (
+              <button
+                key={lista.id}
+                type="button"
+                aria-pressed={listaId === lista.id}
+                onClick={() => {
+                  selecionarLista(lista.id);
+                  setAba("lista");
+                  setBusca("");
+                  setSetorFiltro("Todos");
+                  setRecolhidos([]);
+                  setEditarNomeLista(false);
+                  setEditando(null);
+                }}
+                className={
+                  "rounded-xl border px-3 py-2 text-sm " +
+                  (listaId === lista.id ? "bg-primary text-primary-foreground" : "bg-muted")
+                }
+              >
+                {lista.nome}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       {conclusao && (
         <section
           role="status"

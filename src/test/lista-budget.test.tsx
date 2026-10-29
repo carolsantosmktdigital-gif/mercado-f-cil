@@ -110,3 +110,37 @@ it("offers automatic generation and opens manual creation inside the List tab", 
   await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   expect(screen.getByRole("heading", { name: "Lista de compras" })).toBeInTheDocument();
 });
+it("shows the top list selector only with multiple active lists and switches selection", () => {
+  const ui = setup(0);
+  expect(
+    screen.queryByRole("region", { name: "Alternar lista de compras" }),
+  ).not.toBeInTheDocument();
+  const selecionarLista = vi.fn();
+  state.current = {
+    ...state.current,
+    selecionarLista,
+    listas: [
+      { id: "list", nome: "November", orcamento: 100 },
+      { id: "second", nome: "Semana", orcamento: 60 },
+    ],
+  };
+  ui.rerender(createElement(Route.options.component as any));
+  const selector = screen.getByRole("region", { name: "Alternar lista de compras" });
+  expect(selector).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "November" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Semana" }));
+  expect(selecionarLista).toHaveBeenCalledWith("second");
+  state.current = { ...state.current, listaId: "second" };
+  ui.rerender(createElement(Route.options.component as any));
+  expect(screen.getByRole("button", { name: "Semana" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(screen.getByRole("button", { name: "November" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+});
