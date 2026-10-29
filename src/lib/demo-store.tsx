@@ -94,6 +94,14 @@ type Store = {
     requestId?: string,
   ) => Promise<void>;
   atualizarOrcamento: (valor: number) => Promise<void>;
+  duplicarLista: (
+    origem: string,
+    nome: string,
+    cartaoId: string,
+    orcamento: number,
+    requestId: string,
+    historico?: boolean,
+  ) => Promise<void>;
   renomearLista: (id: string, nome: string) => Promise<void>;
   itens: ItemLista[];
   catalogo: ProdutoCatalogo[];
@@ -636,6 +644,36 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       check(error);
       await refresh("listas");
       if (data?.id) setSelectedId(data.id);
+    },
+    duplicarLista: async (origem, nome, cartaoId, orcamento, requestId, historico = false) => {
+      if (!navigator.onLine) throw new Error("Conecte-se à internet para duplicar a lista.");
+      const card = cartoes.find((c) => c.id === cartaoId);
+      if (
+        !nome.trim() ||
+        nome.trim().length > 100 ||
+        !card ||
+        !Number.isFinite(orcamento) ||
+        orcamento <= 0 ||
+        orcamento > card.saldo
+      )
+        throw new Error("Confira o nome, o cartão e o orçamento da nova lista.");
+      await syncPending();
+      if (readLocal(fid).pending.length)
+        throw new Error(
+          "Ainda há alterações aguardando sincronização. Sincronize antes de duplicar a lista.",
+        );
+      const { error } = await db.rpc("duplicar_lista_compras", {
+        _id: requestId,
+        _familia: fid,
+        _origem: origem,
+        _historico: historico,
+        _nome: nome.trim(),
+        _cartao: cartaoId,
+        _orcamento: orcamento,
+      });
+      check(error);
+      await refresh("listas", "itens");
+      setSelectedId(requestId);
     },
     renomearLista: async (id, nome) => {
       const nomeLimpo = nome.trim();

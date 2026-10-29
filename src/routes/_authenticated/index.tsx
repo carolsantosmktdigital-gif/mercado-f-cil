@@ -1,3 +1,4 @@
+import { DuplicateListButton } from "@/components/DuplicateListButton";
 import { ShoppingListBuilder } from "@/components/ShoppingListBuilder";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, ListChecks, Plus, ShoppingCart } from "lucide-react";
@@ -74,17 +75,27 @@ function Inicio() {
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {listas.map((l) => (
-            <button
+            <div
               key={l.id}
-              type="button"
-              onClick={() => selecionarLista(l.id)}
-              className={
-                "rounded-xl border px-3 py-2 text-sm " +
-                (listaId === l.id ? "bg-primary text-primary-foreground" : "bg-muted")
-              }
+              className="flex max-w-full flex-wrap items-center gap-1 rounded-xl border p-1"
             >
-              {l.nome}
-            </button>
+              <button
+                type="button"
+                onClick={() => selecionarLista(l.id)}
+                className={
+                  "rounded-xl border px-3 py-2 text-sm " +
+                  (listaId === l.id ? "bg-primary text-primary-foreground" : "bg-muted")
+                }
+              >
+                {l.nome}
+              </button>
+              <DuplicateListButton
+                origem={l.id}
+                nome={l.nome}
+                cartaoId={l.cartao_id}
+                orcamento={l.orcamento}
+              />
+            </div>
           ))}
         </div>
         {abrirNovaLista && (

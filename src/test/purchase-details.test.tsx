@@ -6,6 +6,10 @@ vi.mock("@/lib/demo-store", async (original) => ({
   ...(await original<any>()),
   useDemo: () => historyState.current,
 }));
+vi.mock("@tanstack/react-router", async (original) => ({
+  ...(await original<any>()),
+  useNavigate: () => vi.fn(),
+}));
 import { Route as HistoryRoute } from "../routes/_authenticated/historico";
 import { PurchaseDetails } from "../components/PurchaseDetails";
 import type { Compra } from "../lib/demo-store";
@@ -74,6 +78,8 @@ it("can add a missing purchased item without editing another receipt", async () 
 
 it("opens the items of the exact purchase selected in history", () => {
   historyState.current = {
+    cartoes: [],
+    duplicarLista: vi.fn(),
     online: true,
     pendingCount: 0,
     syncError: "",

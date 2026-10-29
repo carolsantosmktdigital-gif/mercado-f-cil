@@ -1,3 +1,4 @@
+import { DuplicateListButton } from "@/components/DuplicateListButton";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { PurchaseDetails } from "@/components/PurchaseDetails";
@@ -73,6 +74,14 @@ function Historico() {
                 <ChevronRight className="h-4 w-4" />
               </span>
             </button>
+            <div className="px-5 pb-5">
+              <DuplicateListButton
+                origem={h.listaId || h.id}
+                nome={h.listaNome || "Compra anterior"}
+                cartaoId={h.cartaoId}
+                historico
+              />
+            </div>
           </li>
         ))}
       </ul>
