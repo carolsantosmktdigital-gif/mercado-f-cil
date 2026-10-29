@@ -4,7 +4,7 @@ DO $test$
 DECLARE
  f uuid; u uuid; card uuid:=gen_random_uuid(); ids uuid[]:=ARRAY[gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),gen_random_uuid()];
  receipts uuid[]:=ARRAY[gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),gen_random_uuid()];
- dates date[]:=ARRAY['2020-10-15'::date,'2020-11-22'::date,'2020-12-10'::date,'2021-02-01'::date];
+ dates date[]:=ARRAY['2020-10-15'::date,'2020-11-18'::date,'2020-12-18'::date,'2021-02-18'::date];
  i integer; n integer; row_data jsonb; snapshot uuid; snapshot_again uuid;
 BEGIN
  SELECT familia_id,user_id INTO f,u FROM public.familia_membros LIMIT 1;
@@ -45,13 +45,13 @@ BEGIN
  SELECT id INTO snapshot_again FROM public.analises_compras WHERE compra_anterior_id=receipts[1] AND compra_atual_id=receipts[2];
  IF snapshot<>snapshot_again THEN RAISE EXCEPTION 'Analysis snapshot was duplicated'; END IF;
  -- Actual offline purchase date overrides the connection date. A gap removes invalid pairs.
- UPDATE public.compras SET data='2021-01-10' WHERE id=receipts[3];
+ UPDATE public.compras SET data='2021-01-18' WHERE id=receipts[3];
  IF EXISTS(SELECT 1 FROM public.analises_compras WHERE compra_anterior_id=receipts[2] AND compra_atual_id=receipts[3]) THEN RAISE EXCEPTION 'Offline date correction kept a skipped month'; END IF;
  IF NOT EXISTS(SELECT 1 FROM public.analises_compras WHERE compra_anterior_id=receipts[3] AND compra_atual_id=receipts[4]) THEN RAISE EXCEPTION 'January/February comparison not generated'; END IF;
- UPDATE public.compras SET data='2021-01-22' WHERE id=receipts[2];
+ UPDATE public.compras SET data='2021-01-18' WHERE id=receipts[2];
  IF EXISTS(SELECT 1 FROM public.analises_compras WHERE compra_anterior_id=receipts[2] AND compra_atual_id=receipts[3]) THEN RAISE EXCEPTION 'Same month comparison generated'; END IF;
  -- December to January must work across years.
- UPDATE public.compras SET data='2020-12-10' WHERE id=receipts[3];
+ UPDATE public.compras SET data='2020-12-18' WHERE id=receipts[3];
  IF NOT EXISTS(SELECT 1 FROM public.analises_compras WHERE compra_anterior_id=receipts[3] AND compra_atual_id=receipts[2]) THEN RAISE EXCEPTION 'Year boundary comparison missing'; END IF;
  IF has_table_privilege('authenticated','public.analises_compras','INSERT') OR has_function_privilege('authenticated','mercado_internal.registrar_analises(uuid)','EXECUTE') THEN RAISE EXCEPTION 'Clients can forge analysis snapshots'; END IF;
  PERFORM set_config('role','authenticated',true);

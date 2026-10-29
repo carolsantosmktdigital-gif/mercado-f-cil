@@ -12,6 +12,8 @@ import { Page } from "@/components/AppShell";
 import { brl, useDemo } from "@/lib/demo-store";
 import {
   analysisMonth,
+  analysisDate,
+  canComparePurchases,
   analysisSummary,
   filterAnalysis,
   type AnalysisFilter,
@@ -38,7 +40,14 @@ const filters: { value: AnalysisFilter; label: string }[] = [
   { value: "sem_comparacao", label: "Sem comparação" },
 ];
 function Analise() {
-  const { analises = [], analisesLoading, analisesError, pendingCount, online } = useDemo();
+  const {
+    analises: savedAnalyses = [],
+    analisesLoading,
+    analisesError,
+    pendingCount,
+    online,
+  } = useDemo();
+  const analises = savedAnalyses.filter((a) => canComparePurchases(a.data_anterior, a.data_atual));
   const [selectedId, setSelectedId] = useState("");
   const [filter, setFilter] = useState<AnalysisFilter>("todos");
   const [search, setSearch] = useState("");
@@ -56,7 +65,9 @@ function Analise() {
           consecutivos. Novembro compara somente com outubro; dezembro, somente com novembro.
         </p>
         <p className="mt-2 text-xs">
-          Sem compra no mês anterior, não há comparação com meses mais antigos.
+          Usamos a data em que cada compra foi finalizada, com tolerância de 5 dias antes ou depois
+          da data equivalente no mês seguinte. Exemplo: 10/10 compara com 05/11 a 15/11. Sem compra
+          compatível no mês anterior, não buscamos meses mais antigos.
         </p>
       </div>
       {pendingCount > 0 && (
@@ -80,11 +91,12 @@ function Analise() {
           <CalendarDays className="mx-auto h-10 w-10 text-primary" />
           <h2 className="mt-4 text-lg font-bold">Aguardando o próximo mês</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Quando houver duas listas finalizadas em meses consecutivos, a comparação será
-            registrada aqui automaticamente.
+            Quando houver duas compras finalizadas em meses consecutivos e dentro da tolerância de 5
+            dias, a comparação será registrada aqui automaticamente.
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
-            Compras no mesmo mês ou com intervalo maior que um mês não geram comparação.
+            Compras no mesmo mês, em meses não consecutivos ou fora dessa tolerância não geram
+            comparação.
           </p>
         </section>
       ) : (
@@ -105,7 +117,8 @@ function Analise() {
             {analises.map((a) => (
               <option key={a.id} value={a.id}>
                 {analysisMonth(a.data_atual)} × {analysisMonth(a.data_anterior)} ·{" "}
-                {a.lista_atual_nome} / {a.lista_anterior_nome}
+                {a.lista_atual_nome} ({analysisDate(a.data_atual)}) / {a.lista_anterior_nome} (
+                {analysisDate(a.data_anterior)})
               </option>
             ))}
           </select>
@@ -115,6 +128,14 @@ function Analise() {
             </h2>
             <p className="mt-1 break-words text-sm text-muted-foreground">
               {selected.lista_atual_nome} comparada com {selected.lista_anterior_nome}
+            </p>
+            <p className="mt-2 text-sm">
+              <CalendarDays className="mr-1 inline h-4 w-4" />
+              Compras realizadas em{" "}
+              <time dateTime={selected.data_anterior}>
+                {analysisDate(selected.data_anterior)}
+              </time>{" "}
+              e <time dateTime={selected.data_atual}>{analysisDate(selected.data_atual)}</time>.
             </p>
             <div className="mt-4 grid grid-cols-3 gap-2">
               <Summary label="Subiram" value={summary.alta} color="text-red-700 bg-red-50" />

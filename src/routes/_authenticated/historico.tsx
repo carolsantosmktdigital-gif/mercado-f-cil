@@ -1,3 +1,4 @@
+import { analysisDate } from "@/lib/analysis";
 import { DuplicateListButton } from "@/components/DuplicateListButton";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -53,11 +54,12 @@ function Historico() {
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2 font-semibold">
                   <CalendarDays className="h-5 w-5 text-primary" />
-                  {new Date(h.data + "T12:00:00").toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric",
-                  })}
+                  <span>
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      Compra realizada em
+                    </span>
+                    <time dateTime={h.data}>{analysisDate(h.data)}</time>
+                  </span>
                 </span>
                 <span className="font-display text-xl font-extrabold">{brl(h.total)}</span>
               </div>

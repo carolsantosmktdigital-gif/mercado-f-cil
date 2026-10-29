@@ -22,8 +22,8 @@ const renderPage = () => render(createElement(Route.options.component as any));
 it("explains the previous-month rule without fabricating a comparison", () => {
   renderPage();
   expect(screen.getByText("Aguardando o próximo mês")).toBeInTheDocument();
-  expect(screen.getByText(/Sem compra no mês anterior/)).toHaveTextContent(
-    "não há comparação com meses mais antigos",
+  expect(screen.getByText(/Sem compra compatível no mês anterior/)).toHaveTextContent(
+    "não buscamos meses mais antigos",
   );
   expect(screen.queryByLabelText("Análises registradas")).not.toBeInTheDocument();
 });
@@ -82,4 +82,20 @@ it("gives a useful offline first-load state", () => {
   expect(
     screen.getByText("Conecte-se para carregar suas análises pela primeira vez."),
   ).toBeInTheDocument();
+});
+
+it("hides cached comparisons outside the five-day window", () => {
+  state.current.analises = [
+    {
+      id: "old",
+      lista_atual_nome: "Novembro",
+      lista_anterior_nome: "Outubro",
+      data_anterior: "2026-10-10",
+      data_atual: "2026-11-16",
+      itens: [],
+    },
+  ];
+  renderPage();
+  expect(screen.getByText("Aguardando o próximo mês")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Análises registradas")).not.toBeInTheDocument();
 });

@@ -1,3 +1,4 @@
+import { analysisDate } from "@/lib/analysis";
 import { useEffect, useRef, useState } from "react";
 import { X, Pencil, Trash2, Plus, Save, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -139,7 +140,8 @@ export function PurchaseDetails({
               {shown.listaNome || "Compra do histórico"}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {new Date(shown.data + "T12:00:00").toLocaleDateString("pt-BR")} · {shown.cartao}
+              Compra realizada em <time dateTime={shown.data}>{analysisDate(shown.data)}</time> ·{" "}
+              {shown.cartao}
             </p>
           </div>
           <button

@@ -3,6 +3,8 @@ import {
   analysisSummary,
   filterAnalysis,
   analysisMonth,
+  analysisDate,
+  canComparePurchases,
   type PriceComparison,
 } from "../lib/analysis";
 const items: PriceComparison[] = [
@@ -46,4 +48,27 @@ describe("analysis display", () => {
   });
   it("labels calendar months and years", () =>
     expect(analysisMonth("2026-11-01")).toContain("novembro"));
+});
+
+describe("purchase date comparison window", () => {
+  it.each([
+    ["2026-10-10", "2026-11-05", true],
+    ["2026-10-10", "2026-11-15", true],
+    ["2026-10-10", "2026-11-04", false],
+    ["2026-10-10", "2026-11-16", false],
+    ["2026-10-10", "2026-10-15", false],
+    ["2026-10-10", "2026-12-10", false],
+    ["2026-01-31", "2026-02-23", true],
+    ["2026-01-31", "2026-02-22", false],
+    ["2024-01-31", "2024-02-24", true],
+    ["2024-01-31", "2024-02-23", false],
+    ["2026-12-31", "2027-01-26", true],
+    ["2026-12-31", "2027-01-25", false],
+    ["2026-02-28", "2026-03-31", true],
+    ["2026-10-10", "invalid", false],
+  ])("compares %s with %s: %s", (previous, current, allowed) =>
+    expect(canComparePurchases(previous, current)).toBe(allowed),
+  );
+  it("shows the actual recorded day without shifting to the previous day", () =>
+    expect(analysisDate("2026-10-29")).toBe("29/10/2026"));
 });

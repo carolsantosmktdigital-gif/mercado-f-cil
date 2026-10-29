@@ -53,3 +53,22 @@ export function analysisMonth(date: string) {
     year: "numeric",
   });
 }
+
+export function analysisDate(date: string) {
+  return new Date(date + "T12:00:00").toLocaleDateString("pt-BR");
+}
+// UTC arithmetic avoids daylight-saving changes when counting calendar days.
+export function canComparePurchases(previous: string, current: string) {
+  const parse = (value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const [year, month, day] = value.split("-").map(Number) as [number, number, number];
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.toISOString().slice(0, 10) === value ? { year, month, day, date } : null;
+  };
+  const p = parse(previous),
+    c = parse(current);
+  if (!p || !c || c.year * 12 + c.month !== p.year * 12 + p.month + 1) return false;
+  const lastDay = new Date(Date.UTC(c.year, c.month, 0)).getUTCDate();
+  const anniversary = Date.UTC(c.year, c.month - 1, Math.min(p.day, lastDay));
+  return Math.abs(c.date.getTime() - anniversary) <= 5 * 24 * 60 * 60 * 1000;
+}
