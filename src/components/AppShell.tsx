@@ -26,7 +26,7 @@ export function Page({
   children: ReactNode;
 }) {
   return (
-    <div className="mx-auto min-h-screen max-w-md bg-background pb-28">
+    <div className="mx-auto min-h-screen max-w-md bg-background pb-36">
       <header className="flex items-end justify-between px-5 pb-4 pt-8">
         <div>
           {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
@@ -41,31 +41,36 @@ export function Page({
         <SyncStatus />
         {children}
       </div>
-      <footer className="mt-10 px-5 text-center text-xs text-muted-foreground">
-        Mercado Fácil · Criado por Carol Santos
-      </footer>
     </div>
   );
 }
 
 export function BottomNav() {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur">
-      <ul className="mx-auto grid max-w-md grid-cols-5">
-        {tabs.map(({ to, label, icon: Icon }) => (
-          <li key={to}>
-            <Link
-              to={to}
-              activeOptions={{ exact: true }}
-              className="flex flex-col items-center gap-1 py-3 text-xs font-medium text-muted-foreground data-[status=active]:text-primary"
-            >
-              <Icon className="h-6 w-6" />
-              {label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
+    <div className="fixed inset-x-0 bottom-0 z-40 bg-card/95 backdrop-blur">
+      <nav aria-label="Menu principal" className="border-t">
+        <ul className="mx-auto grid max-w-md grid-cols-5">
+          {tabs.map(({ to, label, icon: Icon }) => (
+            <li key={to}>
+              <Link
+                to={to}
+                activeOptions={{ exact: true }}
+                className="flex flex-col items-center gap-1 py-3 text-xs font-medium text-muted-foreground data-[status=active]:text-primary"
+              >
+                <Icon className="h-6 w-6" />
+                {label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <footer
+        className="mx-auto max-w-md border-t border-border/50 px-3 pt-1.5 text-center text-[11px] leading-4 text-muted-foreground"
+        style={{ paddingBottom: "calc(0.375rem + env(safe-area-inset-bottom))" }}
+      >
+        Criado por Carol Santos
+      </footer>
+    </div>
   );
 }
 
