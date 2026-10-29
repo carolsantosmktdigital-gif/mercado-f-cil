@@ -21,6 +21,7 @@ export function BudgetEditor() {
         type="button"
         size="sm"
         variant="outline"
+        className="budget-edit-button"
         onClick={() => {
           setValue(orcamento > 0 ? String(orcamento) : "");
           setOpen(true);
