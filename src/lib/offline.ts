@@ -1,9 +1,10 @@
+import { migrateCategoryCache } from "./categories";
 // Each family has one atomic local record: queued writes and cached query data.
 export type PendingWrite = {
   id: string;
   listaId: string;
   itemId: string;
-  kind: "insert" | "update" | "delete" | "finalize" | "history";
+  kind: "insert" | "update" | "delete" | "finalize" | "history" | "category";
   values: Record<string, unknown>;
 };
 type LocalData = { cache: Record<string, unknown>; pending: PendingWrite[] };
@@ -11,7 +12,9 @@ const prefix = "mercado-facil-offline-v1:";
 export function readLocal(family: string): LocalData {
   try {
     return (
-      JSON.parse(localStorage.getItem(prefix + family) || "null") || { cache: {}, pending: [] }
+      (migrateCategoryCache(
+        JSON.parse(localStorage.getItem(prefix + family) || "null"),
+      ) as LocalData | null) || { cache: {}, pending: [] }
     );
   } catch {
     return { cache: {}, pending: [] };
@@ -40,7 +43,7 @@ export function overlayItems<T extends { id: string }>(
 ): T[] {
   let result = [...items];
   for (const op of pending.filter((p) => p.listaId === listaId)) {
-    if (op.kind === "finalize" || op.kind === "history") continue;
+    if (op.kind === "finalize" || op.kind === "history" || op.kind === "category") continue;
     if (op.kind === "delete") result = result.filter((i) => i.id !== op.itemId);
     else if (op.kind === "insert" && !result.some((i) => i.id === op.itemId))
       result.push({ id: op.itemId, ...op.values } as T);

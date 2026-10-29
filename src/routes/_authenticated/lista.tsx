@@ -1,3 +1,4 @@
+import { CategoryField } from "@/components/CategoryField";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Check,
@@ -531,38 +532,11 @@ function Lista() {
                     required
                   />
                 </label>
-                <label className="block text-sm font-medium">
-                  Categoria / setor
-                  <select
-                    className="mt-2 h-12 w-full rounded-xl border bg-background px-3 text-base"
-                    value={categoriaEditando}
-                    onChange={(e) => setCategoriaEditando(e.target.value)}
-                  >
-                    {Array.from(
-                      new Set([
-                        ...itens.map((p) => p.setor),
-                        "Mercearia",
-                        "Higiene",
-                        "Limpeza",
-                        "Laticínios",
-                        "Hortifrúti",
-                        "Carnes",
-                        "Padaria",
-                        "Bebidas",
-                        "Outros",
-                        "Lavínia",
-                        "Proteína",
-                        "Temperos",
-                      ]),
-                    )
-                      .sort((a, b) => a.localeCompare(b, "pt-BR"))
-                      .map((setor) => (
-                        <option key={setor} value={setor}>
-                          {setor}
-                        </option>
-                      ))}
-                  </select>
-                </label>
+                <CategoryField
+                  label="Categoria / setor"
+                  value={categoriaEditando}
+                  onChange={setCategoriaEditando}
+                />
                 <div className="flex gap-2">
                   <Button type="submit" className="flex-1" disabled={salvandoProduto}>
                     {salvandoProduto ? "Salvando..." : "Salvar alterações"}
@@ -583,24 +557,10 @@ function Lista() {
             value={edicao.nome}
             onChange={(e) => setEdicao((p) => ({ ...p, nome: e.target.value }))}
           />
-          <select
-            className="mt-2 w-full rounded-xl border bg-background p-3"
+          <CategoryField
             value={edicao.setor}
-            onChange={(e) => setEdicao((p) => ({ ...p, setor: e.target.value }))}
-          >
-            {[
-              "Hortifrúti",
-              "Mercearia",
-              "Laticínios",
-              "Carnes",
-              "Padaria",
-              "Limpeza",
-              "Bebidas",
-              "Higiene",
-            ].map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
+            onChange={(nome) => setEdicao((p) => ({ ...p, setor: nome }))}
+          />
           <div className="mt-3 flex gap-2">
             <Button
               onClick={async () => {

@@ -1,9 +1,10 @@
+import { CategoryField } from "@/components/CategoryField";
 import { useEffect, useRef, useState } from "react";
 import { X, Pencil, Trash2, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { brl, SETORES, type Compra } from "@/lib/demo-store";
+import { brl, type Compra } from "@/lib/demo-store";
 import {
   historyItemTotal,
   historyTotal,
@@ -251,21 +252,15 @@ export function PurchaseDetails({
                         />
                       </label>
                     </div>
-                    <label className="mt-3 block text-sm">
-                      Setor
-                      <select
-                        aria-label={`Setor do produto ${index + 1}`}
-                        className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3 text-base"
+                    <div className="mt-3">
+                      <CategoryField
+                        label="Categoria / setor"
+                        ariaLabel={`Setor do produto ${index + 1}`}
                         value={item.setor}
-                        onChange={(e) => change(item.id, "setor", e.target.value)}
-                      >
-                        {Array.from(
-                          new Set([...SETORES, ...drafts.map((i) => i.setor), "Outros"]),
-                        ).map((setor) => (
-                          <option key={setor}>{setor}</option>
-                        ))}
-                      </select>
-                    </label>
+                        extra={drafts.map((i) => i.setor)}
+                        onChange={(nome) => change(item.id, "setor", nome)}
+                      />
+                    </div>
                     <div className="mt-3 flex items-center justify-between gap-2">
                       <span className="text-sm font-semibold">
                         Total:{" "}

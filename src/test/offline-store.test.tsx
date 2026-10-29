@@ -257,3 +257,20 @@ it("does not enqueue an unaffordable receipt correction", async () => {
   expect(readLocal("f1").pending).toHaveLength(0);
   expect(hook.result.current.cartoes[0]?.saldo).toBe(100);
 });
+
+it("creates reusable categories offline without duplicates and restores them on reopening", async () => {
+  const hook = renderHook(() => useDemo(), { wrapper });
+  await act(async () => {
+    expect(await hook.result.current.criarCategoria("  Pets  ")).toBe("Pets");
+    expect(await hook.result.current.criarCategoria("pets")).toBe("Pets");
+  });
+  await waitFor(() => expect(hook.result.current.categorias).toContain("Pets"));
+  expect(hook.result.current.categorias).toContain("Crianças");
+  expect(readLocal("f1").pending.filter((p) => p.kind === "category")).toHaveLength(1);
+  expect(readLocal("other-family").pending).toHaveLength(0);
+  hook.unmount();
+  client.clear();
+  const reopened = renderHook(() => useDemo(), { wrapper });
+  expect(reopened.result.current.categorias).toContain("Pets");
+  await expect(reopened.result.current.criarCategoria("Todos")).rejects.toThrow("filtro");
+});

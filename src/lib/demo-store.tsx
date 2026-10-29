@@ -1,3 +1,4 @@
+import { categoryName, validateCategory } from "./categories";
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -24,8 +25,10 @@ export const SETORES = [
   "Limpeza",
   "Bebidas",
   "Higiene",
+  "Crianças",
+  "Outros",
 ] as const;
-export type Setor = (typeof SETORES)[number];
+export type Setor = string;
 export type Cartao = { id: string; nome: string; saldo: number; cor: "verde" | "escuro" | "claro" };
 export type ItemLista = {
   id: string;
@@ -68,6 +71,8 @@ export const totalItem = (i: ItemLista) =>
 const db = supabase as any;
 
 type Store = {
+  categorias: string[];
+  criarCategoria: (nome: string) => Promise<string>;
   analises: PurchaseAnalysis[];
   analisesLoading: boolean;
   analisesError: boolean;
@@ -118,7 +123,14 @@ function useLocalQuery<T>(
     queryFn: async () => {
       const pending = readLocal(fid).pending;
       // Keep the already discounted local snapshot until finalizations are acknowledged.
-      if (pending.some((p) => p.kind === "finalize" || p.kind === "history")) {
+      if (
+        pending.some(
+          (p) =>
+            p.kind === "finalize" ||
+            p.kind === "history" ||
+            (p.kind === "category" && options.queryKey[0] === "categorias"),
+        )
+      ) {
         const snapshot = cached<T>(fid, options.queryKey);
         if (snapshot !== undefined) return snapshot;
       }
@@ -143,7 +155,7 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
   async function syncPending() {
     try {
       const hadFinalization = readLocal(fid).pending.some(
-        (op) => op.kind === "finalize" || op.kind === "history",
+        (op) => op.kind === "finalize" || op.kind === "history" || op.kind === "category",
       );
       await flushWrites(fid, async (op: PendingWrite) => {
         if (op.kind === "finalize") {
@@ -166,6 +178,16 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
             _itens: op.values["produtos"],
             _finalizacao_id: op.values["finalizacaoId"] || null,
           });
+          if (error) throw error;
+          return;
+        }
+        if (op.kind === "category") {
+          const { error } = await db
+            .from("categorias")
+            .upsert(
+              { id: op.itemId, familia_id: fid, nome: categoryName(String(op.values["nome"])) },
+              { onConflict: "familia_id,nome_chave", ignoreDuplicates: true },
+            );
           if (error) throw error;
           return;
         }
@@ -226,8 +248,8 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       setSyncError("");
       if (hadFinalization && !readLocal(fid).pending.length) {
         await Promise.all(
-          ["cartoes", "listas", "itens", "compras", "produtos", "analises"].map((key) =>
-            qc.invalidateQueries({ queryKey: [key, fid] }),
+          ["cartoes", "listas", "itens", "compras", "produtos", "analises", "categorias"].map(
+            (key) => qc.invalidateQueries({ queryKey: [key, fid] }),
           ),
         );
       }
@@ -317,7 +339,7 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
         (data || []).map((r: any): ItemLista => ({
           id: r.id,
           nome: r.nome,
-          setor: r.setor as Setor,
+          setor: categoryName(r.setor),
           qtd: Number(r.qtd),
           preco: Number(r.preco || 0),
           comprado: r.comprado,
@@ -340,7 +362,7 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       return (data || []).map((r: any): ProdutoCatalogo => ({
         id: r.id,
         nome: r.nome,
-        setor: r.setor as Setor,
+        setor: categoryName(r.setor),
         precoRef: Number(r.preco_ref || 0),
       }));
     },
@@ -367,7 +389,7 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
         produtos: (r.compra_itens || []).map((i: any) => ({
           id: i.id,
           nome: i.nome,
-          setor: i.setor,
+          setor: categoryName(i.setor),
           qtd: Number(i.qtd),
           preco: Number(i.preco_unitario),
         })),
@@ -387,6 +409,29 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       return (data || []) as PurchaseAnalysis[];
     },
   });
+  const categoriasQ = useLocalQuery<string[]>(fid, {
+    queryKey: ["categorias", fid],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("categorias")
+        .select("nome")
+        .eq("familia_id", fid)
+        .order("nome");
+      if (error) throw error;
+      return (data || []).map((r: any) => categoryName(r.nome));
+    },
+  });
+  const categorias = Array.from(
+    new Map(
+      [
+        ...SETORES,
+        ...(categoriasQ.data || []),
+        ...(itensQ.data || []).map((i) => i.setor),
+        ...(catQ.data || []).map((i) => i.setor),
+        ...(histQ.data || []).flatMap((h) => (h.produtos || []).map((i) => i.setor)),
+      ].map((name) => [categoryName(name).toLocaleLowerCase("pt-BR"), categoryName(name)]),
+    ).values(),
+  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
   const itens = itensQ.data || [];
   const refresh = async (...keys: string[]) => {
     await Promise.all(keys.map((k) => qc.invalidateQueries({ queryKey: [k, fid] })));
@@ -402,6 +447,28 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
     void syncPending();
   }
   const store: Store = {
+    categorias,
+    criarCategoria: async (valor) => {
+      const nome = validateCategory(valor);
+      const existing = [
+        ...categorias,
+        ...(qc.getQueryData<string[]>(["categorias", fid]) || []),
+      ].find((c) => c.toLocaleLowerCase("pt-BR") === nome.toLocaleLowerCase("pt-BR"));
+      if (existing) return existing;
+      const id = crypto.randomUUID(),
+        key = ["categorias", fid];
+      const next = [...(qc.getQueryData<string[]>(key) || []), nome];
+      void qc.cancelQueries({ queryKey: key });
+      enqueue(
+        fid,
+        { id: crypto.randomUUID(), listaId: "", itemId: id, kind: "category", values: { nome } },
+        key,
+        next,
+      );
+      qc.setQueryData(key, next);
+      void syncPending();
+      return nome;
+    },
     analises: analisesQ.data || [],
     analisesLoading: analisesQ.isPending,
     analisesError: analisesQ.isError,
@@ -650,9 +717,9 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
         { nome: "Danone", setor: "Lacticinios", qtd: 2 },
         { nome: "Banana", setor: "Lacticinios", qtd: 1 },
         { nome: "pão de queijo", setor: "Lacticinios", qtd: 1 },
-        { nome: "Leite em pó", setor: "Lavínia", qtd: 6 },
-        { nome: "Sucos lanche", setor: "Lavínia", qtd: 16 },
-        { nome: "Biscoitos Lavínia", setor: "Lavínia", qtd: 4 },
+        { nome: "Leite em pó", setor: "Crianças", qtd: 6 },
+        { nome: "Sucos lanche", setor: "Crianças", qtd: 16 },
+        { nome: "Biscoitos Lavínia", setor: "Crianças", qtd: 4 },
         { nome: "Detergente", setor: "Limpeza", qtd: 2 },
         { nome: "Barla", setor: "Limpeza", qtd: 1 },
         { nome: "Sabão (Lavar roupas)", setor: "Limpeza", qtd: 1 },
