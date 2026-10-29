@@ -7,7 +7,7 @@ type InstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
-export function InstallApp() {
+export function InstallApp({ compact = false }: { compact?: boolean }) {
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null),
     [installed, setInstalled] = useState<boolean | null>(null),
     [busy, setBusy] = useState(false);
@@ -46,15 +46,25 @@ export function InstallApp() {
   // Wait for the actual launch context, so installed apps never flash installation advice.
   if (installed === null) return null;
   return (
-    <section className="mt-5 rounded-2xl bg-card p-4 shadow-soft">
-      {!installed && <h2 className="font-bold">Mercado Fácil no seu celular</h2>}
+    <section
+      aria-label={compact ? "Instalar ou compartilhar o aplicativo" : undefined}
+      className={
+        compact
+          ? "flex flex-wrap items-center gap-2"
+          : "mt-5 rounded-2xl bg-card p-4 shadow-soft"
+      }
+    >
+      {!installed && !compact && <h2 className="font-bold">Mercado Fácil no seu celular</h2>}
       {!installed && (
         <>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Adicione o app à tela inicial para abrir pelo ícone.
-          </p>
+          {!compact && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Adicione o app à tela inicial para abrir pelo ícone.
+            </p>
+          )}
           <Button
-            className="mt-3"
+            variant={compact ? "outline" : "default"}
+            className={compact ? "h-10 min-w-0 flex-1 rounded-xl px-3" : "mt-3"}
             disabled={busy}
             onClick={async () => {
               if (!prompt) {
@@ -100,7 +110,9 @@ export function InstallApp() {
       )}
       <Button
         variant="outline"
-        className={installed ? "w-full" : "mt-3"}
+        className={
+          compact ? "h-10 min-w-0 flex-1 rounded-xl px-3" : installed ? "w-full" : "mt-3"
+        }
         onClick={async () => {
           const url = window.location.origin + "/";
           try {
