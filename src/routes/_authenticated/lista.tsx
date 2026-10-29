@@ -445,6 +445,7 @@ function Lista() {
       )}
       {listaId && (
         <div className="mb-4">
+          {itens.length === 0 && <ShoppingListBuilder />}
           <Button
             type="button"
             variant="outline"
