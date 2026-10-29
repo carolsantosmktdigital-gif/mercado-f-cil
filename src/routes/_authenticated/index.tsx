@@ -1,3 +1,4 @@
+import { ManualListForm } from "@/components/ManualListForm";
 import { DeleteListButton } from "@/components/DeleteListButton";
 import { InstallApp } from "@/components/InstallApp";
 import { DuplicateListButton } from "@/components/DuplicateListButton";
@@ -6,8 +7,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, ListChecks, Plus, ShoppingCart } from "lucide-react";
 import { Page } from "@/components/AppShell";
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
 import { BudgetCard } from "@/components/BudgetCard";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,12 +28,8 @@ export const Route = createFileRoute("/_authenticated/")({
 });
 
 function Inicio() {
-  const { cartoes, itens, familia, listas, listaId, selecionarLista, criarLista } = useDemo();
+  const { cartoes, itens, familia, listas, listaId, selecionarLista } = useDemo();
   const [abrirNovaLista, setAbrirNovaLista] = useState(false);
-  const [nomeLista, setNomeLista] = useState("");
-  const [cartaoId, setCartaoId] = useState("");
-  const [valorLista, setValorLista] = useState("");
-  const [criando, setCriando] = useState(false);
   useEffect(() => {
     if (window.location.hash === "#nova-lista") setAbrirNovaLista(true);
   }, []);
@@ -136,68 +131,10 @@ function Inicio() {
               </div>
             ))}
           </div>
-          {abrirNovaLista && cartoes.length === 0 && (
-            <div className="mt-4 space-y-3">
-              <p className="text-sm">Primeiro, cadastre um cartão e o orçamento da compra.</p>
-              <Button asChild>
-                <Link to="/cartoes">Cadastrar cartão e orçamento</Link>
-              </Button>
+          {abrirNovaLista && (
+            <div className="mt-4">
+              <ManualListForm onCreated={() => setAbrirNovaLista(false)} />
             </div>
-          )}
-          {abrirNovaLista && cartoes.length > 0 && (
-            <form
-              className="mt-4 space-y-3"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setCriando(true);
-                try {
-                  await criarLista(
-                    nomeLista.trim(),
-                    cartaoId,
-                    Number(valorLista.replace(",", ".")),
-                    0,
-                  );
-                  setAbrirNovaLista(false);
-                  setNomeLista("");
-                  setValorLista("");
-                  toast.success("Lista criada.");
-                } catch {
-                  toast.error("Não foi possível criar a lista.");
-                } finally {
-                  setCriando(false);
-                }
-              }}
-            >
-              <Input
-                required
-                placeholder="Nome da lista"
-                value={nomeLista}
-                onChange={(e) => setNomeLista(e.target.value)}
-              />
-              <select
-                required
-                className="h-12 w-full rounded-xl border bg-background px-3"
-                value={cartaoId}
-                onChange={(e) => setCartaoId(e.target.value)}
-              >
-                <option value="">Selecione um cartão</option>
-                {cartoes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome} · {brl(c.saldo)}
-                  </option>
-                ))}
-              </select>
-              <Input
-                required
-                inputMode="decimal"
-                placeholder="Valor destinado às compras (R$)"
-                value={valorLista}
-                onChange={(e) => setValorLista(e.target.value)}
-              />
-              <Button disabled={criando} type="submit" className="w-full">
-                Criar lista
-              </Button>
-            </form>
           )}
           {listaId && (
             <div className="mt-4">

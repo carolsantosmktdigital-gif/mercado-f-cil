@@ -75,3 +75,31 @@ it("preserves an active draft during peer updates and sends the original field b
   fireEvent.blur(field);
   expect(state.current.updateItem).toHaveBeenCalledWith("two", { preco: 8.5 }, { preco: 0 });
 });
+it("offers automatic generation and opens manual creation inside the List tab", async () => {
+  const ui = setup(0);
+  state.current = {
+    ...state.current,
+    itens: [],
+    listas: [],
+    listaId: "",
+    cartoes: [{ id: "c", nome: "Cartão", saldo: 400 }],
+    criarLista: vi.fn(async () => {}),
+  };
+  ui.rerender(createElement(Route.options.component as any));
+  expect(screen.getByRole("button", { name: "Gerar lista automática" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Cadastrar lista de compras" }));
+  expect(screen.getByRole("dialog")).toHaveTextContent("Cadastrar lista de compras");
+  fireEvent.change(screen.getByLabelText("Nome da lista"), {
+    target: { value: "Compra da semana" },
+  });
+  fireEvent.change(screen.getByLabelText("Cartão"), { target: { value: "c" } });
+  fireEvent.change(screen.getByLabelText("Orçamento da compra (R$)"), {
+    target: { value: "200,50" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Criar lista" }));
+  await waitFor(() =>
+    expect(state.current.criarLista).toHaveBeenCalledWith("Compra da semana", "c", 200.5, 0),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  expect(screen.getByRole("heading", { name: "Lista de compras" })).toBeInTheDocument();
+});

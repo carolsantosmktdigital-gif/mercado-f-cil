@@ -1,3 +1,6 @@
+import { ManualListForm } from "@/components/ManualListForm";
+import { ShoppingListBuilder } from "@/components/ShoppingListBuilder";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CategoryField } from "@/components/CategoryField";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -52,6 +55,7 @@ function Lista() {
     syncError,
     online,
   } = useDemo();
+  const [cadastroAberto, setCadastroAberto] = useState(false);
   const [editarNomeLista, setEditarNomeLista] = useState(false);
   const [novoNomeLista, setNovoNomeLista] = useState("");
   const [salvandoNomeLista, setSalvandoNomeLista] = useState(false);
@@ -349,6 +353,7 @@ function Lista() {
           </div>
         </section>
       )}
+      {!listaId && <ShoppingListBuilder />}
       {!listaId && (
         <section className="mb-4 space-y-3 rounded-3xl bg-card p-5 shadow-soft">
           <h2 className="text-lg font-bold">Crie sua lista de compras</h2>
@@ -356,10 +361,8 @@ function Lista() {
             Você ainda não tem listas cadastradas. Crie uma lista do seu jeito ou gere uma lista
             automática para sua família.
           </p>
-          <Button asChild className="w-full">
-            <Link to="/" hash="nova-lista">
-              Cadastrar lista de compras
-            </Link>
+          <Button type="button" className="w-full" onClick={() => setCadastroAberto(true)}>
+            Cadastrar lista de compras
           </Button>
         </section>
       )}
@@ -731,6 +734,29 @@ function Lista() {
           {finalizando ? "Conferindo e finalizando…" : "Finalizar compra (itens marcados)"}
         </Button>
       )}
+      {listaId && (
+        <div className="mt-6">
+          <ShoppingListBuilder />
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-3 w-full"
+            onClick={() => setCadastroAberto(true)}
+          >
+            Cadastrar outra lista de compras
+          </Button>
+        </div>
+      )}
+      <Dialog open={cadastroAberto} onOpenChange={setCadastroAberto}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-2xl">
+          <DialogTitle>Cadastrar lista de compras</DialogTitle>
+          <DialogDescription>
+            Informe o nome, o cartão e o orçamento. Depois de criar, adicione os produtos na própria
+            aba Lista.
+          </DialogDescription>
+          <ManualListForm onCreated={() => setCadastroAberto(false)} />
+        </DialogContent>
+      </Dialog>
     </Page>
   );
 }
