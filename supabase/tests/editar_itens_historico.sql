@@ -2,7 +2,7 @@ BEGIN;
 DO $test$
 DECLARE
  f uuid; u uuid; card uuid:=gen_random_uuid(); previous_list uuid:=gen_random_uuid(); current_list uuid:=gen_random_uuid();
- previous_purchase uuid:=gen_random_uuid(); purchase uuid; final_op uuid:=gen_random_uuid(); edit_op uuid:=gen_random_uuid(); result_id uuid;
+ previous_purchase uuid:=gen_random_uuid(); purchase uuid; final_op uuid:=gen_random_uuid(); edit_op uuid:=gen_random_uuid(); empty_op uuid:=gen_random_uuid(); result_id uuid;
  balance numeric; revision integer; old_items jsonb; updated_items jsonb;
 BEGIN
  SELECT familia_id,user_id INTO f,u FROM public.familia_membros LIMIT 1;
@@ -35,10 +35,6 @@ BEGIN
   RAISE EXCEPTION 'Stale revision accepted';
  EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Esta compra foi editada%' THEN RAISE; END IF; END;
  BEGIN
-  PERFORM public.editar_itens_compra(purchase,gen_random_uuid(),2,'[]'::jsonb);
-  RAISE EXCEPTION 'Empty receipt accepted';
- EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'A compra deve ter%' THEN RAISE; END IF; END;
- BEGIN
   PERFORM public.editar_itens_compra(purchase,gen_random_uuid(),2,'[{"nome":"Item","qtd":1,"preco":1000}]'::jsonb);
   RAISE EXCEPTION 'Insufficient balance accepted';
  EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Saldo do cartão insuficiente%' THEN RAISE; END IF; END;
@@ -54,6 +50,13 @@ BEGIN
  SELECT saldo INTO balance FROM public.cartoes WHERE id=card;
  IF balance<>120 THEN RAISE EXCEPTION 'Rejected edit changed balance'; END IF;
  IF has_schema_privilege('authenticated','mercado_internal','USAGE') OR has_function_privilege('anon','public.editar_itens_compra(uuid,uuid,integer,jsonb,uuid)','EXECUTE') THEN RAISE EXCEPTION 'Invalid receipt privileges'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',u::text,true);
+ PERFORM public.editar_itens_compra(purchase,empty_op,2,'[]'::jsonb);
+ PERFORM public.editar_itens_compra(purchase,empty_op,2,'[]'::jsonb);
+ SELECT saldo INTO balance FROM public.cartoes WHERE id=card;
+ IF balance<>200 THEN RAISE EXCEPTION 'Last-item removal did not refund exactly once'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM public.compras WHERE id=purchase AND total=0 AND itens=0 AND revisao_itens=3) THEN RAISE EXCEPTION 'Empty purchase total or count incorrect'; END IF;
+ IF EXISTS(SELECT 1 FROM public.compra_itens WHERE compra_id=purchase) THEN RAISE EXCEPTION 'Deleted item still present'; END IF;
 END $test$;
 ROLLBACK;
 SELECT 'PASS: receipt-scoped editing, refund and extra debit, retry-safe operations, offline receipt mapping, revision conflicts, item validation, family authorization and monthly analysis refresh; fixtures rolled back' AS result;

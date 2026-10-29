@@ -109,7 +109,7 @@ function RootComponent() {
     document.documentElement.lang = "pt-BR";
     if (import.meta.env.PROD && "serviceWorker" in navigator) {
       navigator.serviceWorker
-        .register("/sw.js")
+        .register("/sw.js", { updateViaCache: "none" })
         .then(() => navigator.serviceWorker.ready)
         .then((registration) => {
           registration.active?.postMessage({

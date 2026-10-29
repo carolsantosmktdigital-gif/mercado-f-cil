@@ -7,8 +7,7 @@ export function historyTotal(items: HistoryItem[]) {
 }
 export function validateHistoryItems(items: HistoryItem[]) {
   validateHistoryPrecision(items);
-  if (!items.length || items.length > 1000)
-    throw new Error("A compra deve ter entre 1 e 1000 produtos.");
+  if (items.length > 1000) throw new Error("A compra pode ter até 1000 produtos.");
   if (
     items.some(
       (i) =>

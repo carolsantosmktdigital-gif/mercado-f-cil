@@ -274,3 +274,26 @@ it("creates reusable categories offline without duplicates and restores them on 
   expect(reopened.result.current.categorias).toContain("Pets");
   await expect(reopened.result.current.criarCategoria("Todos")).rejects.toThrow("filtro");
 });
+
+it("deleting the final historic item refunds its total offline and preserves the receipt", async () => {
+  const purchase = {
+    id: "empty-test",
+    data: "2026-10-29",
+    cartao: "Card",
+    cartaoId: "c1",
+    total: 20,
+    itens: 1,
+    revisao: 0,
+    produtos: [{ id: "item", nome: "Arroz", setor: "Mercearia", qtd: 1, preco: 20 }],
+  };
+  saveCache("f1", ["compras", "f1"], [purchase]);
+  const hook = renderHook(() => useDemo(), { wrapper });
+  await act(async () => {
+    await hook.result.current.editarCompra(purchase, []);
+  });
+  await waitFor(() => expect(hook.result.current.historico[0]?.total).toBe(0));
+  expect(hook.result.current.historico[0]?.produtos).toEqual([]);
+  expect(hook.result.current.historico[0]?.itens).toBe(0);
+  expect(hook.result.current.cartoes[0]?.saldo).toBe(120);
+  expect(readLocal("f1").pending.at(-1)?.values["produtos"]).toEqual([]);
+});
