@@ -58,7 +58,7 @@ const products: Product[] = [
   ["Limpador multiuso", "Limpeza", 1, "frasco de 500 ml"],
   ["Saco de lixo", "Limpeza", 1, "rolo de 30 unidades"],
   ["Pano de limpeza", "Limpeza", 1, "unidade"],
-  ["Papel higiênico", "Higiene", 12, "rolos"],
+  ["Papel higiênico", "Higiene", 1, "pacotes de 12 rolos"],
   ["Sabonete", "Higiene", 4, "unidades"],
   ["Creme dental", "Higiene", 2, "tubos"],
   ["Escova de dentes", "Higiene", 2, "unidades"],
