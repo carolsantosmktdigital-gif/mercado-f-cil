@@ -4,7 +4,7 @@ import { ShoppingListBuilder } from "@/components/ShoppingListBuilder";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, ListChecks, Plus, ShoppingCart } from "lucide-react";
 import { Page } from "@/components/AppShell";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { BudgetCard } from "@/components/BudgetCard";
@@ -34,11 +34,15 @@ function Inicio() {
   const [cartaoId, setCartaoId] = useState("");
   const [valorLista, setValorLista] = useState("");
   const [criando, setCriando] = useState(false);
+  useEffect(() => {
+    if (window.location.hash === "#nova-lista") setAbrirNovaLista(true);
+  }, []);
   const total = cartoes.reduce((s, c) => s + c.saldo, 0);
   const pendentes = itens.filter((i) => !i.comprado).length;
   return (
     <Page title="Mercado Fácil" subtitle="Olá! Boas compras 🛒">
-      <section className="mb-4 flex items-center justify-between rounded-3xl bg-accent p-4 text-accent-foreground">
+      <InstallApp />
+      <section className="mb-4 mt-5 flex items-center justify-between rounded-3xl bg-accent p-4 text-accent-foreground">
         <div>
           <p className="font-bold">{familia.nome}</p>
           <p className="text-sm opacity-80">
@@ -53,10 +57,24 @@ function Inicio() {
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">Saldo total nos cartões</p>
           <Link to="/cartoes" className="text-sm font-semibold text-primary">
-            Ver todos
+            {cartoes.length ? "Editar cartões" : "Cadastrar"}
           </Link>
         </div>
         <p className="mt-1 font-display text-3xl font-extrabold">{brl(total)}</p>
+        {(cartoes.length === 0 || total <= 0) && (
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {cartoes.length
+                ? "Atualize o saldo do cartão e defina o orçamento para sua compra."
+                : "Cadastre um cartão, informe o saldo disponível e defina o orçamento da compra."}
+            </p>
+            <Button asChild className="w-full">
+              <Link to="/cartoes">
+                {cartoes.length ? "Editar saldo e orçamento" : "Cadastrar cartão e orçamento"}
+              </Link>
+            </Button>
+          </div>
+        )}
         <ul className="mt-4 space-y-2">
           {cartoes.map((c) => (
             <li key={c.id} className="flex justify-between rounded-2xl bg-muted px-4 py-3">
@@ -67,9 +85,13 @@ function Inicio() {
         </ul>
       </section>
 
-      <section className="mt-5 rounded-2xl bg-card p-4 shadow-soft">
+      {!listas.length && <ShoppingListBuilder />}
+
+      <section id="nova-lista" className="mt-5 scroll-mt-4 rounded-2xl bg-card p-4 shadow-soft">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="font-bold">Suas listas</h2>
+          <h2 className="flex items-center gap-2 font-bold">
+            <ShoppingCart className="h-5 w-5" /> Compras em andamento
+          </h2>
           <Button size="sm" onClick={() => setAbrirNovaLista((v) => !v)}>
             <Plus className="h-4 w-4" /> Nova lista
           </Button>
@@ -99,7 +121,21 @@ function Inicio() {
             </div>
           ))}
         </div>
-        {abrirNovaLista && (
+        {!listas.length && !abrirNovaLista && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Você ainda não tem uma lista de compras. Use um modelo acima ou toque em Nova lista para
+            começar.
+          </p>
+        )}
+        {abrirNovaLista && cartoes.length === 0 && (
+          <div className="mt-4 space-y-3">
+            <p className="text-sm">Primeiro, cadastre um cartão e o orçamento da compra.</p>
+            <Button asChild>
+              <Link to="/cartoes">Cadastrar cartão e orçamento</Link>
+            </Button>
+          </div>
+        )}
+        {abrirNovaLista && cartoes.length > 0 && (
           <form
             className="mt-4 space-y-3"
             onSubmit={async (e) => {
@@ -154,34 +190,42 @@ function Inicio() {
             </Button>
           </form>
         )}
+        {listaId && (
+          <div className="mt-4">
+            <BudgetCard />
+            <Button asChild className="mt-4 w-full">
+              <Link to="/lista">
+                Continuar compra <ChevronRight className="h-5 w-5" />
+              </Link>
+            </Button>
+          </div>
+        )}
       </section>
-
-      <ShoppingListBuilder />
-      <InstallApp />
-
-      <h2 className="mb-3 mt-8 flex items-center gap-2 text-xl font-bold">
-        <ShoppingCart className="h-5 w-5" /> Compra em andamento
-      </h2>
-      <BudgetCard />
 
       <h2 className="mb-3 mt-8 text-xl font-bold">Acesso rápido</h2>
       <div className="grid grid-cols-2 gap-3">
         <Link to="/lista" className="rounded-3xl bg-card p-5 shadow-soft">
           <ListChecks className="h-7 w-7 text-primary" />
           <p className="mt-3 font-bold">Lista de compras</p>
-          <p className="text-sm text-muted-foreground">{pendentes} itens a pegar</p>
+          <p className="text-sm text-muted-foreground">
+            {listas.length ? `${pendentes} itens a pegar` : "Crie sua primeira lista"}
+          </p>
         </Link>
-        <Link to="/adicionar" className="rounded-3xl bg-accent p-5 text-accent-foreground">
+        <Link
+          to={listaId ? "/adicionar" : "/"}
+          hash={listaId ? "" : "nova-lista"}
+          onClick={() => {
+            if (!listaId) setAbrirNovaLista(true);
+          }}
+          className="rounded-3xl bg-accent p-5 text-accent-foreground"
+        >
           <Plus className="h-7 w-7" />
-          <p className="mt-3 font-bold">Adicionar produto</p>
-          <p className="text-sm opacity-80">Na lista e no catálogo</p>
+          <p className="mt-3 font-bold">{listaId ? "Adicionar produto" : "Cadastrar lista"}</p>
+          <p className="text-sm opacity-80">
+            {listaId ? "Na lista e no catálogo" : "Comece sua compra"}
+          </p>
         </Link>
       </div>
-      <Button asChild size="lg" className="mt-6 h-14 w-full rounded-2xl text-base">
-        <Link to="/lista">
-          Continuar compra <ChevronRight className="h-5 w-5" />
-        </Link>
-      </Button>
     </Page>
   );
 }

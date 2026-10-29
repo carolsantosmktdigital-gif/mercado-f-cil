@@ -78,6 +78,7 @@ function Lista() {
   const foco = useRef<{ id: string; campo: "qtd" | "preco"; base: number } | null>(null);
   const produtoBase = useRef<Record<string, unknown>>({});
   const [finalizando, setFinalizando] = useState(false);
+  const [conclusao, setConclusao] = useState<{ pendentes: number; offline: boolean } | null>(null);
   const [rascunhos, setRascunhos] = useState<Record<string, { qtd: string; preco: string }>>({});
   useEffect(() => {
     if (foco.current && !itens.some((i) => i.id === foco.current!.id)) {
@@ -318,38 +319,93 @@ function Lista() {
       title="Lista de compras"
       subtitle={`${itens.filter((i) => i.comprado).length} de ${itens.length} no carrinho`}
     >
-      <div className="mb-4 rounded-3xl bg-card px-5 py-5 shadow-soft">
-        <p className="text-xs text-muted-foreground">Lista em uso</p>
-        <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            className="min-w-0 break-words text-left text-2xl font-bold underline-offset-4 hover:underline focus-visible:underline"
-            aria-label="Toque para alterar o nome da lista"
-            title="Toque para alterar o nome da lista"
-            onClick={() => {
-              if (!listaId) return;
-              setNovoNomeLista(listas.find((l) => l.id === listaId)?.nome || "");
-              setEditarNomeLista(true);
-            }}
-          >
-            {listas.find((l) => l.id === listaId)?.nome || "Nenhuma lista selecionada"}
+      {conclusao && (
+        <section
+          role="status"
+          className="mb-4 space-y-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"
+        >
+          <h2 className="font-bold">Compra finalizada!</h2>
+          <p className="text-sm">
+            A compra foi movida para a aba Histórico, onde você pode consultar ou editar os itens
+            comprados.
+          </p>
+          <p className="text-sm">
+            {conclusao.pendentes > 0
+              ? "Os itens que não foram comprados geraram uma nova lista de pendências. Eles permanecerão nela até serem efetivamente comprados."
+              : "Todos os itens desta lista foram comprados. Não foi necessário criar uma lista de pendências."}
+          </p>
+          {conclusao.offline && (
+            <p className="text-sm">
+              Os dados estão salvos neste celular e serão sincronizados quando houver conexão.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm">
+              <Link to="/historico">Ver Histórico</Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setConclusao(null)}>
+              Continuar
+            </Button>
+          </div>
+        </section>
+      )}
+      {!listaId && (
+        <section className="mb-4 space-y-3 rounded-3xl bg-card p-5 shadow-soft">
+          <h2 className="text-lg font-bold">Crie sua lista de compras</h2>
+          <p className="text-sm text-muted-foreground">
+            Você ainda não tem listas cadastradas. Crie uma lista do seu jeito ou use um modelo
+            personalizado para sua família.
+          </p>
+          <Button asChild className="w-full">
+            <Link to="/" hash="nova-lista">
+              Cadastrar lista de compras
+            </Link>
+          </Button>
+        </section>
+      )}
+      {listaId && (
+        <div className="mb-4 rounded-2xl bg-accent p-4 text-sm">
+          Sua compra está em andamento. Ao terminar, abra o{" "}
+          <button type="button" className="font-bold underline" onClick={() => setAba("carrinho")}>
+            Carrinho
           </button>
-          {listaId && (
+          , confira os itens e toque em <strong>Finalizar compra</strong>.
+        </div>
+      )}
+      {listaId && (
+        <div className="mb-4 rounded-3xl bg-card px-5 py-5 shadow-soft">
+          <p className="text-xs text-muted-foreground">Lista em uso</p>
+          <div className="flex items-center justify-between gap-3">
             <button
               type="button"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-primary"
-              aria-label="Alterar nome da lista"
-              title="Alterar nome da lista"
+              className="min-w-0 break-words text-left text-2xl font-bold underline-offset-4 hover:underline focus-visible:underline"
+              aria-label="Toque para alterar o nome da lista"
+              title="Toque para alterar o nome da lista"
               onClick={() => {
+                if (!listaId) return;
                 setNovoNomeLista(listas.find((l) => l.id === listaId)?.nome || "");
                 setEditarNomeLista(true);
               }}
             >
-              <Pencil className="h-5 w-5" />
+              {listas.find((l) => l.id === listaId)?.nome || "Nenhuma lista selecionada"}
             </button>
-          )}
+            {listaId && (
+              <button
+                type="button"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-primary"
+                aria-label="Alterar nome da lista"
+                title="Alterar nome da lista"
+                onClick={() => {
+                  setNovoNomeLista(listas.find((l) => l.id === listaId)?.nome || "");
+                  setEditarNomeLista(true);
+                }}
+              >
+                <Pencil className="h-5 w-5" />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
       {editarNomeLista && listaId && (
         <div className="mb-4 rounded-2xl border bg-card p-4 shadow-soft">
           <form
@@ -659,7 +715,10 @@ function Lista() {
             if (finalizando) return;
             setFinalizando(true);
             try {
+              const pendingItems = itens.filter((i) => !i.comprado).length;
               await finalizarCompra();
+              setConclusao({ pendentes: pendingItems, offline: !online });
+              setAba("lista");
             } catch (error) {
               toast.error(
                 error instanceof Error ? error.message : "Não foi possível finalizar a compra.",

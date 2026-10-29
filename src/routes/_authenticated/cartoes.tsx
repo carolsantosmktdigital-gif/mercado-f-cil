@@ -114,33 +114,48 @@ function Cartoes() {
         </Button>
       }
     >
-      {aberto && (
+      {cartoes.length === 0 && (
+        <div className="mb-4 rounded-2xl bg-accent p-4">
+          <h2 className="font-bold">Comece pelo cartão e pelo orçamento</h2>
+          <p className="mt-2 text-sm">
+            Você ainda não tem cartões cadastrados. Preencha abaixo o nome do cartão, o saldo
+            disponível e quanto deseja destinar a esta compra.
+          </p>
+        </div>
+      )}
+      {(aberto || cartoes.length === 0) && (
         <form onSubmit={salvar} className="mb-6 space-y-4 rounded-3xl bg-card p-5 shadow-soft">
           <h2 className="text-lg font-bold">Novo cartão</h2>
           <div className="space-y-1">
-            <Label>Nome do cartão</Label>
+            <Label htmlFor="cartao-nome">Nome do cartão</Label>
             <Input
               className="h-12"
+              id="cartao-nome"
+              required
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               placeholder="Ex.: Vale-alimentação"
             />
           </div>
           <div className="space-y-1">
-            <Label>Saldo disponível (R$)</Label>
+            <Label htmlFor="cartao-saldo">Saldo disponível (R$)</Label>
             <Input
               className="h-12"
               inputMode="decimal"
+              id="cartao-saldo"
+              required
               value={saldo}
               onChange={(e) => setSaldo(e.target.value)}
               placeholder="0,00"
             />
           </div>
           <div className="space-y-1">
-            <Label>Valor destinado às compras (R$)</Label>
+            <Label htmlFor="cartao-orcamento">Orçamento desta compra (R$)</Label>
             <Input
               className="h-12"
               inputMode="decimal"
+              id="cartao-orcamento"
+              required
               value={destinado}
               onChange={(e) => setDestinado(e.target.value)}
               placeholder="Ex.: 500,00"
