@@ -20,8 +20,10 @@ it("mostra instruções de Android e iPhone e compartilha somente o link públic
   const share = vi.fn(async () => {});
   Object.defineProperty(navigator, "share", { configurable: true, value: share });
   render(<InstallApp />);
+  fireEvent.click(screen.getByRole("button", { name: "Instalar app" }));
   expect(screen.getByText(/Android \(Chrome\)/)).toBeInTheDocument();
   expect(screen.getByText(/iPhone \(Safari\)/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Entendi" }));
   fireEvent.click(screen.getByRole("button", { name: "Compartilhar app" }));
   await waitFor(() =>
     expect(share).toHaveBeenCalledWith(

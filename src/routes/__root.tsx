@@ -1,3 +1,4 @@
+import { AppUpdateNotice } from "@/components/AppUpdateNotice";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -137,6 +138,7 @@ function RootComponent() {
   }, [router, queryClient]);
   return (
     <QueryClientProvider client={queryClient}>
+      <AppUpdateNotice />
       <Outlet />
       <Toaster position="top-center" />
     </QueryClientProvider>

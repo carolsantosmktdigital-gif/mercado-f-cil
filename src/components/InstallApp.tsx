@@ -1,3 +1,4 @@
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import { Download, Share2 } from "lucide-react";
 import { toast } from "sonner";
@@ -10,6 +11,7 @@ export function InstallApp() {
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null),
     [installed, setInstalled] = useState<boolean | null>(null),
     [busy, setBusy] = useState(false);
+  const [instructions, setInstructions] = useState(false);
   useEffect(() => {
     const modes = ["standalone", "minimal-ui", "fullscreen"].map((mode) =>
       window.matchMedia(`(display-mode: ${mode})`),
@@ -51,39 +53,49 @@ export function InstallApp() {
           <p className="mt-2 text-sm text-muted-foreground">
             Adicione o app à tela inicial para abrir pelo ícone.
           </p>
-          {prompt ? (
-            <Button
-              className="mt-3"
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  await prompt.prompt();
-                  const choice = await prompt.userChoice;
-                  setPrompt(null);
-                  if (choice.outcome === "accepted")
-                    toast.success("Confirme a instalação no celular.");
-                } catch {
-                  toast.error("Use o menu do navegador para adicionar à tela inicial.");
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              <Download className="h-4 w-4" /> Instalar app
-            </Button>
-          ) : (
-            <div className="mt-3 space-y-2 text-sm">
-              <p>
+          <Button
+            className="mt-3"
+            disabled={busy}
+            onClick={async () => {
+              if (!prompt) {
+                setInstructions(true);
+                return;
+              }
+              setBusy(true);
+              try {
+                await prompt.prompt();
+                await prompt.userChoice;
+                setPrompt(null);
+              } catch {
+                setInstructions(true);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Download className="h-4 w-4" /> Instalar app
+          </Button>
+          <Dialog open={instructions} onOpenChange={setInstructions}>
+            <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-2xl">
+              <DialogTitle>Instalar Mercado Fácil</DialogTitle>
+              <DialogDescription>
+                Adicione o app à tela inicial para abrir pelo ícone.
+              </DialogDescription>
+              <p className="text-sm">
                 <strong>Android (Chrome):</strong> abra o menu ⋮ e escolha “Adicionar à tela
                 inicial” ou “Instalar app”.
               </p>
-              <p>
+              <p className="text-sm">
                 <strong>iPhone (Safari):</strong> toque em Compartilhar e depois em “Adicionar à
                 Tela de Início”. Se aparecer, ative “Abrir como App da Web”.
               </p>
-            </div>
-          )}
+              <p className="text-sm text-muted-foreground">
+                Se o link abriu dentro de outro aplicativo, abra-o no Chrome ou Safari para
+                instalar.
+              </p>
+              <Button onClick={() => setInstructions(false)}>Entendi</Button>
+            </DialogContent>
+          </Dialog>
         </>
       )}
       <Button
