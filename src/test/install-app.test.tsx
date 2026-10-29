@@ -79,3 +79,11 @@ it("keeps the installation notice in a browser after installing elsewhere", asyn
   act(() => window.dispatchEvent(new Event("appinstalled")));
   expect(screen.getByText(/Adicione o app/)).toBeInTheDocument();
 });
+
+it("shows compact install and share shortcuts without the full onboarding card", () => {
+  render(<InstallApp compact />);
+  expect(screen.getByRole("region", { name: "Instalar ou compartilhar o aplicativo" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Instalar app" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Compartilhar app" })).toBeInTheDocument();
+  expect(screen.queryByText("Mercado Fácil no seu celular")).not.toBeInTheDocument();
+});
