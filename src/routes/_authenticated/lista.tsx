@@ -394,6 +394,11 @@ function Lista() {
               </button>
             )}
           </div>
+          <Button asChild className="mt-4 w-full">
+            <Link to="/adicionar">
+              <Plus className="h-4 w-4" /> Cadastrar item na lista
+            </Link>
+          </Button>
         </div>
       )}
       {editarNomeLista && listaId && (
@@ -679,19 +684,6 @@ function Lista() {
         >
           {finalizando ? "Conferindo e finalizando…" : "Finalizar compra (itens marcados)"}
         </Button>
-      )}
-      {listaId && (
-        <div className="mt-6">
-          <ShoppingListBuilder />
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-3 w-full"
-            onClick={() => setCadastroAberto(true)}
-          >
-            Cadastrar outra lista de compras
-          </Button>
-        </div>
       )}
       <Dialog open={cadastroAberto} onOpenChange={setCadastroAberto}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-2xl">

@@ -1,4 +1,4 @@
-const CACHE = "mercado-shell-v18";
+const CACHE = "mercado-shell-v19";
 const ASSETS = "mercado-assets-v1";
 const pages = ["/", "/lista", "/cartoes", "/adicionar", "/historico", "/analise"];
 self.addEventListener("install", (event) => {

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { Page } from "@/components/AppShell";
@@ -32,6 +32,9 @@ function Adicionar() {
   const [setor, setSetor] = useState<Setor>("Mercearia");
   const [qtd, setQtd] = useState("1");
   const [preco, setPreco] = useState("");
+  const [busy, setBusy] = useState(false);
+  const saving = useRef(false);
+  const nomeInput = useRef<HTMLInputElement>(null);
 
   const q = parseFloat(qtd.replace(",", ".")) || 0;
   const p = parseFloat(preco.replace(",", ".")) || 0;
@@ -40,19 +43,33 @@ function Adicionar() {
       ? catalogo.filter((c) => c.nome.toLowerCase().includes(nome.toLowerCase())).slice(0, 3)
       : [];
 
-  async function salvar(e: React.FormEvent) {
+  async function salvar(e: React.SyntheticEvent, continuar = false) {
     e.preventDefault();
-    if (!nome.trim() || q <= 0) {
-      toast.error("Informe nome e quantidade.");
+    if (saving.current) return;
+    if (!nome.trim() || !Number.isFinite(q) || q <= 0 || !Number.isFinite(p) || p < 0) {
+      toast.error("Informe nome, quantidade e preço válidos.");
       return;
     }
+    saving.current = true;
+    setBusy(true);
     try {
       await addItem({ nome: nome.trim(), setor, qtd: q, preco: p, inesperado: !!inesperado });
-    } catch {
-      return;
+      if (continuar) {
+        setNome("");
+        setQtd("1");
+        setPreco("");
+        toast.success("Item salvo. Cadastre o próximo produto.");
+        nomeInput.current?.focus();
+      } else {
+        toast.success("Produto adicionado à lista.");
+        void navigate({ to: "/lista" });
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o item.");
+    } finally {
+      saving.current = false;
+      setBusy(false);
     }
-    toast.success("Produto adicionado à lista ");
-    navigate({ to: "/lista" });
   }
 
   return (
@@ -70,10 +87,13 @@ function Adicionar() {
         </Button>
       }
     >
-      <form onSubmit={salvar} className="space-y-5">
+      <form onSubmit={(event) => void salvar(event, false)} className="space-y-5">
         <div className="space-y-1">
-          <Label>Nome do produto</Label>
+          <Label htmlFor="produto-nome">Nome do produto</Label>
           <Input
+            id="produto-nome"
+            ref={nomeInput}
+            required
             className="h-14 text-base"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
@@ -101,19 +121,21 @@ function Adicionar() {
         <CategoryField label="Categoria / setor" value={setor} onChange={setSetor} />
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label>Quantidade</Label>
+            <Label htmlFor="produto-quantidade">Quantidade</Label>
             <Input
               className="h-14 text-base"
               inputMode="decimal"
+              id="produto-quantidade"
               value={qtd}
               onChange={(e) => setQtd(e.target.value)}
             />
           </div>
           <div className="space-y-1">
-            <Label>Preço unitário (R$)</Label>
+            <Label htmlFor="produto-preco">Preço unitário (R$)</Label>
             <Input
               className="h-14 text-base"
               inputMode="decimal"
+              id="produto-preco"
               value={preco}
               onChange={(e) => setPreco(e.target.value)}
               placeholder="0,00"
@@ -127,9 +149,24 @@ function Adicionar() {
         <p className="text-sm text-muted-foreground">
           Produtos novos serão incluídos automaticamente no catálogo.
         </p>
-        <Button type="submit" size="lg" className="h-14 w-full rounded-2xl text-base">
-          Adicionar à lista
-        </Button>
+        <div className="sticky bottom-24 z-30 grid grid-cols-2 gap-3 bg-background/95 py-3">
+          <Button
+            type="button"
+            disabled={busy}
+            variant="outline"
+            className="h-auto min-h-14 whitespace-normal rounded-2xl px-3 py-3 text-sm"
+            onClick={(event) => void salvar(event, true)}
+          >
+            Salvar e cadastrar outro
+          </Button>
+          <Button
+            type="submit"
+            disabled={busy}
+            className="h-auto min-h-14 whitespace-normal rounded-2xl px-3 py-3 text-sm"
+          >
+            {busy ? "Salvando…" : "Salvar item na lista"}
+          </Button>
+        </div>
       </form>
     </Page>
   );
