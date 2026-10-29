@@ -49,7 +49,6 @@ function Lista() {
     finalizarCompra,
     listas,
     listaId,
-    importarListaPadrao,
     renomearLista,
     pendingCount,
     syncError,
@@ -107,18 +106,6 @@ function Lista() {
   useEffect(() => {
     foco.current = null;
     setRascunhos({});
-  }, [listaId]);
-  /* A criação de listas fica exclusivamente na página inicial. */
-  const [importando, setImportando] = useState(false);
-  const [modeloCarregado, setModeloCarregado] = useState<Record<string, boolean>>({});
-  useEffect(() => {
-    if (!listaId) return;
-    try {
-      setModeloCarregado((p) => ({
-        ...p,
-        [listaId]: localStorage.getItem("mercado-facil-modelo-" + listaId) === "sim",
-      }));
-    } catch {}
   }, [listaId]);
   const total = itens.reduce((s, i) => s + totalItem(i), 0);
   const pendentes = itens.filter((i) => !i.comprado);
@@ -449,47 +436,6 @@ function Lista() {
               </Button>
             </div>
           </form>
-        </div>
-      )}
-      {listaId && !modeloCarregado[listaId] && itens.length < 50 && (
-        <div className="mb-4 rounded-2xl border bg-card p-4">
-          <p className="mb-2 text-sm text-muted-foreground">
-            Lista mensal baseada na planilha de setembro. Mantém os itens já cadastrados e não
-            duplica nomes. Os preços ficam em branco para preencher durante a compra.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full min-h-12"
-            disabled={importando}
-            onClick={async () => {
-              if (
-                !window.confirm(
-                  "Adicionar os produtos da lista padrão a esta lista, sem apagar os itens existentes?",
-                )
-              )
-                return;
-              setImportando(true);
-              try {
-                const n = await importarListaPadrao();
-                setModeloCarregado((p) => ({ ...p, [listaId]: true }));
-                try {
-                  localStorage.setItem("mercado-facil-modelo-" + listaId, "sim");
-                } catch {}
-                toast.success(
-                  n
-                    ? `${n} produtos adicionados à lista.`
-                    : "Todos os produtos da lista padrão já estão presentes.",
-                );
-              } catch {
-                toast.error("Não foi possível carregar a lista padrão.");
-              } finally {
-                setImportando(false);
-              }
-            }}
-          >
-            {importando ? "Carregando produtos..." : "Carregar lista padrão do mês"}
-          </Button>
         </div>
       )}
       {listaId && (

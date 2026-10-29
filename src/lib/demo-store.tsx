@@ -127,7 +127,6 @@ type Store = {
     base?: Record<string, unknown>,
   ) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
-  importarListaPadrao: () => Promise<number>;
   editarCompra: (compra: Compra, produtos: HistoryItem[]) => Promise<void>;
   finalizarCompra: () => Promise<void>;
 };
@@ -835,79 +834,6 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
         inesperado: !!novo.inesperado,
         created_at: new Date().toISOString(),
       });
-    },
-    importarListaPadrao: async () => {
-      if (!listaId) throw new Error("Selecione uma lista.");
-      const padrao = [
-        { nome: "Sabonetes", setor: "Higiene", qtd: 6 },
-        { nome: "Lenço umedecido", setor: "Higiene", qtd: 2 },
-        { nome: "desodorante Carol", setor: "Higiene", qtd: 1 },
-        { nome: "Desodorante Lohran", setor: "Higiene", qtd: 1 },
-        { nome: "Pasta de dente", setor: "Higiene", qtd: 1 },
-        { nome: "Gel", setor: "Higiene", qtd: 1 },
-        { nome: "Gillete", setor: "Higiene", qtd: 1 },
-        { nome: "Shampoo", setor: "Higiene", qtd: 1 },
-        { nome: "Condicionador", setor: "Higiene", qtd: 1 },
-        { nome: "pasta de dente Lavinia", setor: "Higiene", qtd: 1 },
-        { nome: "Espuma de Barbear", setor: "Higiene", qtd: 1 },
-        { nome: "Sabonete Intimo", setor: "Higiene", qtd: 1 },
-        { nome: "Sabonete líquido", setor: "Higiene", qtd: 1 },
-        { nome: "Leite Semi Desnatado", setor: "Lacticinios", qtd: 6 },
-        { nome: "Mussarela", setor: "Lacticinios", qtd: 1 },
-        { nome: "molho de tomate", setor: "Lacticinios", qtd: 3 },
-        { nome: "Margarina 500g", setor: "Lacticinios", qtd: 1 },
-        { nome: "Tapioca", setor: "Lacticinios", qtd: 1 },
-        { nome: "Danone", setor: "Lacticinios", qtd: 2 },
-        { nome: "Banana", setor: "Lacticinios", qtd: 1 },
-        { nome: "pão de queijo", setor: "Lacticinios", qtd: 1 },
-        { nome: "Leite em pó", setor: "Crianças", qtd: 6 },
-        { nome: "Sucos lanche", setor: "Crianças", qtd: 16 },
-        { nome: "Biscoitos Lavínia", setor: "Crianças", qtd: 4 },
-        { nome: "Detergente", setor: "Limpeza", qtd: 2 },
-        { nome: "Barla", setor: "Limpeza", qtd: 1 },
-        { nome: "Sabão (Lavar roupas)", setor: "Limpeza", qtd: 1 },
-        { nome: "saco de lixo", setor: "Limpeza", qtd: 1 },
-        { nome: "oleo", setor: "Limpeza", qtd: 1 },
-        { nome: "Adoçante", setor: "Limpeza", qtd: 1 },
-        { nome: "Papel higiênico", setor: "Limpeza", qtd: 1 },
-        { nome: "Bombril", setor: "Limpeza", qtd: 1 },
-        { nome: "Pedra sanitária", setor: "Limpeza", qtd: 2 },
-        { nome: "pano de chão", setor: "Limpeza", qtd: 1 },
-        { nome: "Hamburguer", setor: "Limpeza", qtd: 1 },
-        { nome: "cloro", setor: "Limpeza", qtd: 1 },
-        { nome: "Amaciante", setor: "Limpeza", qtd: 1 },
-        { nome: "Açúcar", setor: "Mercearia", qtd: 4 },
-        { nome: "Arroz", setor: "Mercearia", qtd: 2 },
-        { nome: "Feijão", setor: "Mercearia", qtd: 2 },
-        { nome: "Suco", setor: "Mercearia", qtd: 2 },
-        { nome: "Miojo", setor: "Mercearia", qtd: 1 },
-        { nome: "café soluvel", setor: "Outros", qtd: 1 },
-        { nome: "Café", setor: "Padaria", qtd: 1 },
-        { nome: "Filtro de cafe 103", setor: "Padaria", qtd: 1 },
-        { nome: "Pao Integral", setor: "Padaria", qtd: 4 },
-        { nome: "Empanitos", setor: "Proteína", qtd: 2 },
-        { nome: "requeijão zero", setor: "Proteína", qtd: 2 },
-        { nome: "Carnes", setor: "Proteína", qtd: 1 },
-        { nome: "Macarrão", setor: "Temperos", qtd: 1 },
-      ];
-      const existentes = new Set(itens.map((i) => i.nome.trim().toLocaleLowerCase("pt-BR")));
-      const novos = padrao.filter((p) => !existentes.has(p.nome.trim().toLocaleLowerCase("pt-BR")));
-      if (!novos.length) return 0;
-      const { error } = await db.from("itens_lista").insert(
-        novos.map((p) => ({
-          familia_id: fid,
-          lista_id: listaId,
-          nome: p.nome,
-          setor: p.setor,
-          qtd: p.qtd,
-          preco: null,
-          comprado: false,
-          inesperado: false,
-        })),
-      );
-      check(error);
-      await refresh("itens");
-      return novos.length;
     },
     editarCompra: async (compra, produtos) => {
       validateHistoryItems(produtos);
