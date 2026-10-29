@@ -198,3 +198,25 @@
     background-color: #9a3412;
   }
 }
+
+/* Fixed contrast for the budget editor in light/dark mode, even in highlighted panels. */
+@layer utilities {
+  .budget-edit-button {
+    background-color: #fff;
+    color: #000;
+    border-color: #000;
+  }
+  .budget-edit-button:hover {
+    background-color: #f4f4f5;
+    color: #000;
+  }
+  .dark .budget-edit-button {
+    background-color: #000;
+    color: #fff;
+    border-color: #fff;
+  }
+  .dark .budget-edit-button:hover {
+    background-color: #18181b;
+    color: #fff;
+  }
+}
