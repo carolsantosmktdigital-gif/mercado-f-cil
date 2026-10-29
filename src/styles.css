@@ -175,22 +175,6 @@
     border: 2px solid #d97706;
     box-shadow: 0 4px 16px rgb(217 119 6 / 0.25);
   }
-  .budget-remaining {
-    display: inline-block;
-    border-radius: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 1rem;
-    font-weight: 600;
-    border: 1px solid currentColor;
-  }
-  .budget-remaining-danger,
-  .dark .budget-remaining-danger {
-    color: #fff;
-  }
-  .budget-remaining-warning,
-  .dark .budget-remaining-warning {
-    color: #3d1c00;
-  }
   .budget-panel-danger :is(.bg-red-500, .bg-red-600) {
     background-color: #fca5a5;
   }
