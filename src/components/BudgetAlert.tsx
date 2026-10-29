@@ -15,6 +15,7 @@ export function BudgetAlert({
   const amount = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
     remaining,
   );
+  const availableMessage = `Você tem ${amount} (${percentage}%) do orçamento disponível!`;
   return (
     <div
       role="status"
@@ -27,8 +28,11 @@ export function BudgetAlert({
         <p className="font-semibold">
           {level === "danger" ? "Orçamento no limite!" : "Atenção ao orçamento!"}
         </p>
-        <p className="mt-1 font-bold tabular-nums">{amount}</p>
-        <p className="mt-1 font-medium">Você tem {percentage}% do orçamento disponível.</p>
+        <p className="mt-1 font-medium tabular-nums">
+          {level === "danger"
+            ? `Seu orçamento está chegando ao final. ${availableMessage}`
+            : availableMessage}
+        </p>
       </div>
     </div>
   );
