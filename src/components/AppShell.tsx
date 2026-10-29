@@ -41,6 +41,9 @@ export function Page({
         <SyncStatus />
         {children}
       </div>
+      <footer className="mt-10 px-5 text-center text-xs text-muted-foreground">
+        Mercado Fácil · Criado por Carol Santos
+      </footer>
     </div>
   );
 }
