@@ -1,6 +1,6 @@
 import { BudgetEditor } from "@/components/BudgetEditor";
 import { budgetState } from "@/lib/budget";
-import { AlertTriangle } from "lucide-react";
+import { BudgetAlert } from "@/components/BudgetAlert";
 import { brl, totalItem, useDemo } from "@/lib/demo-store";
 
 export function BudgetCard() {
@@ -8,16 +8,16 @@ export function BudgetCard() {
   const gasto = itens.filter((i) => i.comprado).reduce((s, i) => s + totalItem(i), 0);
   const restante = orcamento - gasto;
   const { percent: pct, level } = budgetState(orcamento, gasto);
-  const color =
-    level === "danger"
-      ? "text-red-800 bg-red-50"
-      : level === "warning"
-        ? "text-orange-800 bg-orange-50"
-        : "";
+
   const cartao = cartoes.find((c) => c.id === cartaoCompraId);
 
   return (
-    <section className="rounded-3xl bg-primary p-5 text-primary-foreground shadow-soft">
+    <section
+      className={
+        "rounded-3xl bg-primary p-5 text-primary-foreground shadow-soft " +
+        (level !== "normal" ? `budget-panel-${level}` : "")
+      }
+    >
       <div className="mb-4 border-b border-primary-foreground/20 pb-4">
         <p className="text-sm opacity-80">
           Saldo disponível do cartão · {cartao?.nome || "Não vinculado"}
@@ -27,7 +27,7 @@ export function BudgetCard() {
         </p>
       </div>
       <p className="text-sm opacity-80">Restante do orçamento desta lista</p>
-      <p className={"mt-1 rounded-xl p-1 font-display text-4xl font-extrabold " + color}>
+      <p className="mt-1 rounded-xl p-1 font-display text-4xl font-extrabold">
         {orcamento > 0 ? brl(restante) : "A definir"}
       </p>
       {orcamento > 0 ? (
@@ -51,14 +51,7 @@ export function BudgetCard() {
           </div>
           <div className="mt-4 min-h-12">
             {level !== "normal" ? (
-              <div
-                className={
-                  "flex items-center gap-2 rounded-2xl px-3 py-3 text-sm font-semibold " + color
-                }
-              >
-                <AlertTriangle className="h-5 w-5" /> Atenção: resta{" "}
-                {level === "danger" ? "20%" : "30%"} ou menos do orçamento.
-              </div>
+              <BudgetAlert level={level} remaining={restante} budget={orcamento} />
             ) : (
               <div className="rounded-2xl border border-dashed border-primary-foreground/30 px-3 py-3 text-sm opacity-70">
                 Avisaremos aqui quando restar 30% do orçamento.

@@ -1,3 +1,4 @@
+import { BudgetAlert } from "@/components/BudgetAlert";
 import { BudgetEditor } from "@/components/BudgetEditor";
 import { ManualListForm } from "@/components/ManualListForm";
 import { ShoppingListBuilder } from "@/components/ShoppingListBuilder";
@@ -497,7 +498,12 @@ function Lista() {
       )}
       {listaId && (
         <div className="sticky top-0 z-20 -mx-2 bg-background/95 px-2 py-2 backdrop-blur">
-          <div className="rounded-3xl bg-emerald-50 px-5 py-4 text-emerald-950 shadow-sm">
+          <div
+            className={
+              "rounded-3xl bg-emerald-50 px-5 py-4 text-emerald-950 shadow-sm " +
+              (level !== "normal" ? `budget-panel-${level}` : "")
+            }
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-sm font-semibold">
                 Orçamento: {budget > 0 ? brl(budget) : "A definir"}
@@ -512,26 +518,29 @@ function Lista() {
                   : "Cartão não vinculado"}
               </strong>
             </p>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-emerald-100">
+            <div className="mt-3 h-3 overflow-hidden rounded-full bg-emerald-100">
               <div
                 className={"h-full rounded-full transition-colors " + barClass}
                 style={{ width: `${100 - percent}%` }}
               />
             </div>
-            <div className="mt-2 flex justify-between gap-2 text-xs">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
               <span>
                 Gasto: <strong>{brl(totalCarrinho)}</strong>
               </span>
-              <span className={balanceClass}>
+              <span
+                className={
+                  balanceClass +
+                  (level !== "normal" ? ` budget-remaining budget-remaining-${level}` : "")
+                }
+              >
                 Restante: <strong>{budget > 0 ? brl(remaining) : "A definir"}</strong>
               </span>
             </div>
             {level !== "normal" && (
-              <p role="status" className={"mt-2 text-sm " + balanceClass}>
-                {level === "danger"
-                  ? "Atenção: resta 20% ou menos do orçamento."
-                  : "Atenção: resta 30% ou menos do orçamento."}
-              </p>
+              <div className="mt-4">
+                <BudgetAlert level={level} remaining={remaining} budget={budget} />
+              </div>
             )}
           </div>
         </div>

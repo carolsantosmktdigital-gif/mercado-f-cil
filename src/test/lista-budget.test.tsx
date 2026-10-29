@@ -144,3 +144,10 @@ it("shows the top list selector only with multiple active lists and switches sel
     "false",
   );
 });
+it("shows the actual available percentage and amount inside the full-card warning", () => {
+  const ui = setup(84);
+  const alert = screen.getByRole("status");
+  expect(alert).toHaveTextContent(/R\$\s*16,00/);
+  expect(alert).toHaveTextContent("Você tem 16% do orçamento disponível.");
+  expect(ui.container.querySelector(".budget-panel-danger")).toContainElement(alert);
+});

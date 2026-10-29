@@ -1,6 +1,6 @@
 export function budgetState(budget: number, spent: number) {
   const remaining = Math.round((budget - spent) * 100) / 100;
-  const level =
+  const level: "normal" | "warning" | "danger" =
     budget > 0 && remaining <= budget * 0.2
       ? "danger"
       : budget > 0 && remaining <= budget * 0.3
