@@ -1,3 +1,4 @@
+import { BudgetEditor } from "@/components/BudgetEditor";
 import { ManualListForm } from "@/components/ManualListForm";
 import { ShoppingListBuilder } from "@/components/ShoppingListBuilder";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -43,6 +44,8 @@ export const Route = createFileRoute("/_authenticated/lista")({
 function Lista() {
   const {
     itens,
+    cartoes = [],
+    cartaoCompraId,
     toggleItem,
     updateItem,
     removeItem,
@@ -459,9 +462,20 @@ function Lista() {
       {listaId && (
         <div className="sticky top-0 z-20 -mx-2 bg-background/95 px-2 py-2 backdrop-blur">
           <div className="rounded-3xl bg-emerald-50 px-5 py-4 text-emerald-950 shadow-sm">
-            <div className="text-sm font-semibold">
-              Orçamento: {brl(listas.find((l) => l.id === listaId)?.orcamento || 0)}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm font-semibold">
+                Orçamento: {budget > 0 ? brl(budget) : "A definir"}
+              </div>
+              <BudgetEditor />
             </div>
+            <p className="mt-2 text-xs">
+              Saldo disponível do cartão:{" "}
+              <strong>
+                {cartoes.find((c) => c.id === cartaoCompraId)
+                  ? brl(cartoes.find((c) => c.id === cartaoCompraId)!.saldo)
+                  : "Cartão não vinculado"}
+              </strong>
+            </p>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-emerald-100">
               <div
                 className={"h-full rounded-full transition-colors " + barClass}
@@ -473,7 +487,7 @@ function Lista() {
                 Gasto: <strong>{brl(totalCarrinho)}</strong>
               </span>
               <span className={balanceClass}>
-                Restante: <strong>{brl(remaining)}</strong>
+                Restante: <strong>{budget > 0 ? brl(remaining) : "A definir"}</strong>
               </span>
             </div>
             {level !== "normal" && (

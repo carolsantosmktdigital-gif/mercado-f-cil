@@ -11,6 +11,7 @@ export function ManualListForm({ onCreated }: { onCreated: () => void }) {
     [valor, setValor] = useState(""),
     [busy, setBusy] = useState(false);
   const submitting = useRef(false);
+  const requestId = useRef(crypto.randomUUID());
   if (!cartoes.length)
     return (
       <div className="space-y-3">
@@ -29,8 +30,15 @@ export function ManualListForm({ onCreated }: { onCreated: () => void }) {
         submitting.current = true;
         setBusy(true);
         try {
-          await criarLista(nome.trim(), cartao, Number(valor.replace(",", ".")), 0);
-          toast.success("Lista criada. Você já pode adicionar os produtos.");
+          await criarLista(
+            nome.trim(),
+            cartao,
+            Number(valor.replace(",", ".")),
+            0,
+            undefined,
+            requestId.current,
+          );
+          toast.success("Lista pronta. Você já pode adicionar os produtos.");
           onCreated();
         } catch (error) {
           toast.error(error instanceof Error ? error.message : "Não foi possível criar a lista.");

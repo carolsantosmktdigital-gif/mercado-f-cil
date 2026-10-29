@@ -1,6 +1,12 @@
 export function categoryName(value: string) {
   const name = value.trim().replace(/\s+/g, " ");
-  return ["lavínia", "lavinia"].includes(name.toLocaleLowerCase("pt-BR")) ? "Crianças" : name;
+  const key = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR");
+  if (key === "lavinia") return "Crianças";
+  if (["lacticinios", "laticinios"].includes(key)) return "Laticínios";
+  return name;
 }
 export function validateCategory(value: string) {
   const name = categoryName(value);

@@ -43,3 +43,21 @@ it("creates and selects a new category without submitting the product form", asy
   expect(state.criarCategoria).toHaveBeenCalledWith("Pets");
   expect(submit).not.toHaveBeenCalled();
 });
+
+it.each(["Lacticinios", "Lacticínios", "Laticínios", "laticinios", " LÁCTICÍNIOS "])(
+  "unifies dairy category %s",
+  (name) => expect(categoryName(name)).toBe("Laticínios"),
+);
+it("normalizes queued and cached dairy categories without renaming products", () => {
+  expect(
+    migrateCategoryCache({
+      nome: "Leite Lacticinios",
+      setor: "Lacticinios",
+      pending: [{ base: { setor: "Lacticínios" }, values: { setor: "Laticinios" } }],
+    }),
+  ).toEqual({
+    nome: "Leite Lacticinios",
+    setor: "Laticínios",
+    pending: [{ base: { setor: "Laticínios" }, values: { setor: "Laticínios" } }],
+  });
+});

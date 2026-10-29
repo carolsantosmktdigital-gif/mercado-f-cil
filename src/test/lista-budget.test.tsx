@@ -98,7 +98,14 @@ it("offers automatic generation and opens manual creation inside the List tab", 
   });
   fireEvent.click(screen.getByRole("button", { name: "Criar lista" }));
   await waitFor(() =>
-    expect(state.current.criarLista).toHaveBeenCalledWith("Compra da semana", "c", 200.5, 0),
+    expect(state.current.criarLista).toHaveBeenCalledWith(
+      "Compra da semana",
+      "c",
+      200.5,
+      0,
+      undefined,
+      expect.any(String),
+    ),
   );
   await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   expect(screen.getByRole("heading", { name: "Lista de compras" })).toBeInTheDocument();

@@ -687,23 +687,22 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
         saveCache(fid, ["selected"], createdId || id);
         return createdId && createdId !== id ? "existing" : "created";
       }
-      const { data, error } = await db
-        .from("listas_compras")
-        .insert({
-          familia_id: fid,
-          cartao_id: cartaoId,
-          nome,
-          orcamento,
-          valor_reservado: reserva,
-          status: "em_andamento",
-          tipo: "normal",
-        })
-        .select("id")
-        .single();
+      const id = requestId || crypto.randomUUID();
+      const { data, error } = await db.rpc("criar_lista_vazia", {
+        _id: id,
+        _familia: fid,
+        _cartao: cartaoId,
+        _nome: nome.trim(),
+        _orcamento: orcamento,
+        _reserva: reserva,
+      });
       check(error);
-      await refresh("listas");
-      if (data?.id) setSelectedId(data.id);
-      return "created";
+      await refresh("listas", "itens");
+      if (data) {
+        setSelectedId(data);
+        saveCache(fid, ["selected"], data);
+      }
+      return data !== id ? "existing" : "created";
     },
     excluirLista: async (id) => {
       if (!navigator.onLine) throw new Error("Conecte-se à internet para excluir a lista.");

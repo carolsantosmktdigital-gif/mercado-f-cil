@@ -13,7 +13,8 @@ import {
 } from "@/lib/shopping-templates";
 
 export function ShoppingListBuilder() {
-  const { criarLista, cartoes, historico = [] } = useDemo();
+  const { criarLista, cartoes, historico = [], listas = [], listaId = "", itens = [] } = useDemo();
+  const emptyList = itens.length === 0 ? listas.find((l) => l.id === listaId) : undefined;
   const lastPurchase = [...historico].sort((a, b) => b.data.localeCompare(a.data))[0];
   const [source, setSource] = useState<Compra | null>(null);
   const [declined, setDeclined] = useState(false);
@@ -61,11 +62,14 @@ export function ShoppingListBuilder() {
               onClick={() => {
                 setSource(lastPurchase);
                 setItems(historyTemplateItems(lastPurchase.produtos!));
-                setNome(lastPurchase.listaNome || "Minha lista de compras");
+                setNome(emptyList?.nome || lastPurchase.listaNome || "Minha lista de compras");
                 setCartao(
-                  cartoes.some((c) => c.id === lastPurchase.cartaoId) ? lastPurchase.cartaoId! : "",
+                  emptyList?.cartao_id ||
+                    (cartoes.some((c) => c.id === lastPurchase.cartaoId)
+                      ? lastPurchase.cartaoId!
+                      : ""),
                 );
-                setBudget("");
+                setBudget(emptyList?.orcamento ? String(emptyList.orcamento) : "");
                 setRequestId(crypto.randomUUID());
                 setOpen(true);
               }}
@@ -90,7 +94,9 @@ export function ShoppingListBuilder() {
           setOpen(true);
           setSource(null);
           setItems(null);
-          setNome("Minha lista de compras");
+          setNome(emptyList?.nome || "Minha lista de compras");
+          setCartao(emptyList?.cartao_id || "");
+          setBudget(emptyList?.orcamento ? String(emptyList.orcamento) : "");
         }}
       >
         Gerar lista automática
@@ -186,7 +192,7 @@ export function ShoppingListBuilder() {
                   );
                   toast.success(
                     result === "existing"
-                      ? "Esta lista já existe e foi selecionada. Use Duplicar se quiser uma cópia."
+                      ? "Lista pronta! Os produtos estão disponíveis na lista selecionada."
                       : "Lista personalizada criada. Você pode adicionar outros produtos na lista.",
                   );
                   setOpen(false);
