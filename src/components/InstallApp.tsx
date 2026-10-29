@@ -8,13 +8,16 @@ type InstallPrompt = Event & {
 };
 export function InstallApp() {
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null),
-    [installed, setInstalled] = useState(false),
+    [installed, setInstalled] = useState<boolean | null>(null),
     [busy, setBusy] = useState(false);
   useEffect(() => {
-    const media = window.matchMedia("(display-mode: standalone)");
+    const modes = ["standalone", "minimal-ui", "fullscreen"].map((mode) =>
+      window.matchMedia(`(display-mode: ${mode})`),
+    );
     const check = () =>
       setInstalled(
-        media.matches || !!(navigator as Navigator & { standalone?: boolean }).standalone,
+        modes.some((mode) => mode.matches) ||
+          !!(navigator as Navigator & { standalone?: boolean }).standalone,
       );
     check();
     const available = (event: Event) => {
@@ -22,21 +25,27 @@ export function InstallApp() {
       setPrompt(event as InstallPrompt);
     };
     const done = () => {
-      setInstalled(true);
+      check();
       setPrompt(null);
     };
     window.addEventListener("beforeinstallprompt", available);
     window.addEventListener("appinstalled", done);
-    media.addEventListener("change", check);
+    modes.forEach((mode) => mode.addEventListener("change", check));
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", check);
     return () => {
       window.removeEventListener("beforeinstallprompt", available);
       window.removeEventListener("appinstalled", done);
-      media.removeEventListener("change", check);
+      modes.forEach((mode) => mode.removeEventListener("change", check));
+      window.removeEventListener("focus", check);
+      document.removeEventListener("visibilitychange", check);
     };
   }, []);
+  // Wait for the actual launch context, so installed apps never flash installation advice.
+  if (installed === null) return null;
   return (
     <section className="mt-5 rounded-2xl bg-card p-4 shadow-soft">
-      <h2 className="font-bold">Mercado Fácil no seu celular</h2>
+      {!installed && <h2 className="font-bold">Mercado Fácil no seu celular</h2>}
       {!installed && (
         <>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -79,7 +88,7 @@ export function InstallApp() {
       )}
       <Button
         variant="outline"
-        className="mt-3"
+        className={installed ? "w-full" : "mt-3"}
         onClick={async () => {
           const url = window.location.origin + "/";
           try {
