@@ -133,6 +133,8 @@ export function ShoppingListBuilder() {
                 e.preventDefault();
                 setBusy(true);
                 try {
+                  if (items.some((item) => !Number.isInteger(item.qtd) || item.qtd < 1))
+                    throw new Error("Informe quantidades inteiras, a partir de 1.");
                   await criarLista(
                     nome,
                     cartao,
@@ -185,9 +187,9 @@ export function ShoppingListBuilder() {
                               <Input
                                 aria-label={`Quantidade de ${item.nome}`}
                                 type="number"
-                                min="0.001"
+                                min="1"
                                 max="999999"
-                                step="0.001"
+                                step="1"
                                 required
                                 className="w-20"
                                 value={item.qtd}

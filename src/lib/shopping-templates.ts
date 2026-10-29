@@ -32,7 +32,7 @@ const products: Product[] = [
   ["Limão", "Hortifrúti", 1, "kg", ["Almoço", "Jantar"]],
   ["Tomate", "Hortifrúti", 2, "kg", ["Almoço", "Jantar"]],
   ["Cebola", "Hortifrúti", 1, "kg", ["Almoço", "Jantar"]],
-  ["Alho", "Hortifrúti", 0.2, "kg", ["Almoço", "Jantar"]],
+  ["Alho", "Hortifrúti", 2, "porções de 100 g", ["Almoço", "Jantar"]],
   ["Batata", "Hortifrúti", 2, "kg", ["Almoço", "Jantar"]],
   ["Cenoura", "Hortifrúti", 1, "kg", ["Almoço", "Jantar"]],
   ["Alface", "Hortifrúti", 4, "unidades", ["Almoço", "Jantar"]],
@@ -43,7 +43,7 @@ const products: Product[] = [
   ["Peixe", "Carnes", 1, "kg", ["Almoço", "Jantar"]],
   ["Ovos", "Carnes", 30, "unidades", ["Café da manhã", "Almoço", "Jantar"]],
   ["Leite", "Laticínios", 8, "caixas de 1 L", ["Café da manhã", "Lanches"]],
-  ["Queijo", "Laticínios", 0.5, "kg", ["Café da manhã", "Lanches"]],
+  ["Queijo", "Laticínios", 1, "pacotes de 500 g", ["Café da manhã", "Lanches"]],
   ["Iogurte", "Laticínios", 8, "unidades", ["Café da manhã", "Lanches"]],
   ["Manteiga ou margarina", "Laticínios", 1, "pote de 500 g", ["Café da manhã", "Lanches"]],
   ["Pão de forma", "Padaria", 4, "pacotes", ["Café da manhã", "Lanches"]],
@@ -109,8 +109,7 @@ export function generateShoppingList(p: Preferences): TemplateItem[] {
         nome,
         setor,
         unidade,
-        qtd:
-          unidade === "kg" ? Math.max(0.1, Math.round(raw * 10) / 10) : Math.max(1, Math.ceil(raw)),
+        qtd: Math.max(1, Math.ceil(raw)),
       },
     ];
   });

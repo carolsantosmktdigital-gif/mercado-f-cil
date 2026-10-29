@@ -33,3 +33,10 @@ describe("listas personalizadas", () => {
     expect(() => generateShoppingList({ ...base, refeicoes: [] })).toThrow();
   });
 });
+it("sugere somente quantidades inteiras para todos os períodos e famílias", () => {
+  for (const dias of [7, 15, 30])
+    for (const criancas of [0, 1, 3]) {
+      const list = generateShoppingList({ ...base, dias, criancas, total: 2 + criancas });
+      expect(list.every((item) => Number.isInteger(item.qtd) && item.qtd >= 1)).toBe(true);
+    }
+});

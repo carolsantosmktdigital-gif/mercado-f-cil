@@ -1,3 +1,4 @@
+import { InstallApp } from "@/components/InstallApp";
 import { DuplicateListButton } from "@/components/DuplicateListButton";
 import { ShoppingListBuilder } from "@/components/ShoppingListBuilder";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -156,6 +157,7 @@ function Inicio() {
       </section>
 
       <ShoppingListBuilder />
+      <InstallApp />
 
       <h2 className="mb-3 mt-8 flex items-center gap-2 text-xl font-bold">
         <ShoppingCart className="h-5 w-5" /> Compra em andamento
