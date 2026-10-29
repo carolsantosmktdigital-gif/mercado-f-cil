@@ -18,14 +18,17 @@ export const Route = createFileRoute("/_authenticated")({
   component: Layout,
 });
 
-function Layout() {
+export function Layout() {
+  const qc = useQueryClient();
   const [user, setUser] = useState<{ id: string } | null>(
     () => cached<{ id: string }>("identity", ["user"]) || null,
   );
   const [authError, setAuthError] = useState("");
   useEffect(() => {
     let active = true;
+    let generation = 0;
     async function iniciar() {
+      const attempt = generation;
       if (!navigator.onLine) {
         const local = cached<{ id: string }>("identity", ["user"]);
         if (local) {
@@ -36,6 +39,7 @@ function Layout() {
         return;
       }
       const { data: sessionData } = await supabase.auth.getSession();
+      if (!active || attempt !== generation) return;
       if (sessionData.session?.user) {
         const local = { id: sessionData.session.user.id };
         saveCache("identity", ["user"], local);
@@ -44,14 +48,14 @@ function Layout() {
       }
       if (cached("identity", ["user"]) && !sessionData.session) return;
       const { data: existing } = await supabase.auth.getUser();
-      if (!active) return;
+      if (!active || attempt !== generation) return;
       if (existing.user) {
         saveCache("identity", ["user"], { id: existing.user.id });
         setUser(existing.user);
         return;
       }
       const { data, error } = await supabase.auth.signInAnonymously();
-      if (!active) return;
+      if (!active || attempt !== generation) return;
       if (error || !data.user) {
         setAuthError(error?.message || "Não foi possível iniciar.");
         return;
@@ -59,11 +63,29 @@ function Layout() {
       saveCache("identity", ["user"], { id: data.user.id });
       setUser(data.user);
     }
-    iniciar();
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== "SIGNED_OUT" || !active) return;
+      generation += 1;
+      const previous = cached<{ id: string }>("identity", ["user"]);
+      saveCache("identity", ["user"], null);
+      if (previous) {
+        saveCache(previous.id, ["familia"], null);
+        void qc.cancelQueries({ queryKey: ["familia", previous.id] });
+        qc.removeQueries({ queryKey: ["familia", previous.id] });
+      }
+      setUser(null);
+      setAuthError("");
+      // Start the new anonymous session outside Supabase's auth callback lock.
+      window.setTimeout(() => {
+        if (active) void iniciar();
+      }, 0);
+    });
+    void iniciar();
     return () => {
       active = false;
+      listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [qc]);
   if (authError)
     return (
       <div className="mx-auto max-w-md p-8 text-center">

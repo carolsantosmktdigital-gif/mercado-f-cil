@@ -6,7 +6,8 @@ import { ShoppingListBuilder } from "@/components/ShoppingListBuilder";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, ListChecks, Plus, ShoppingCart } from "lucide-react";
 import { Page } from "@/components/AppShell";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { BudgetCard } from "@/components/BudgetCard";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +34,19 @@ function Inicio() {
   useEffect(() => {
     if (window.location.hash === "#nova-lista") setAbrirNovaLista(true);
   }, []);
+  const [saindo, setSaindo] = useState(false);
+  const saindoRef = useRef(false);
+  async function sair() {
+    if (saindoRef.current) return;
+    saindoRef.current = true;
+    setSaindo(true);
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+    if (error) {
+      toast.error("Não foi possível sair da família. Tente novamente.");
+      saindoRef.current = false;
+      setSaindo(false);
+    }
+  }
   const total = cartoes.reduce((s, c) => s + c.saldo, 0);
   const pendentes = itens.filter((i) => !i.comprado).length;
   return (
@@ -45,8 +59,8 @@ function Inicio() {
             Código para convidar: <span className="font-mono font-bold">{familia.codigo}</span>
           </p>
         </div>
-        <Button variant="ghost" onClick={() => supabase.auth.signOut()}>
-          Sair
+        <Button variant="ghost" disabled={saindo} onClick={sair}>
+          {saindo ? "Saindo…" : "Sair"}
         </Button>
       </section>
       <section className="rounded-3xl bg-card p-5 shadow-soft">
