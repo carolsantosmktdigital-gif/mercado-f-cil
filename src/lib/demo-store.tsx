@@ -121,8 +121,8 @@ type Store = {
   historico: Compra[];
   orcamento: number;
   cartaoCompraId: string;
-  addCartao: (nome: string, saldo: number, destinado?: number) => Promise<void>;
-  salvarCartao: (id: string, nome: string, saldo: number, destinado: number) => Promise<void>;
+  addCartao: (nome: string, saldo: number) => Promise<void>;
+  salvarCartao: (id: string, nome: string, saldo: number, destinado?: number) => Promise<void>;
   excluirCartao: (id: string) => Promise<void>;
   toggleItem: (id: string) => Promise<void>;
   addItem: (i: Omit<ItemLista, "id" | "comprado">) => Promise<void>;
@@ -581,53 +581,31 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
     }),
     orcamento: lista?.orcamento || 0,
     cartaoCompraId: lista?.cartao_id || "",
-    addCartao: async (nome, saldo, destinado = 0) => {
-      if (
-        !nome.trim() ||
-        saldo < 0 ||
-        !Number.isFinite(saldo) ||
-        destinado < 0 ||
-        !Number.isFinite(destinado) ||
-        destinado > saldo
-      )
-        throw new Error("Confira o saldo e o valor destinado.");
-      const { data, error } = await db
+    addCartao: async (nome, saldo) => {
+      if (!nome.trim() || saldo < 0 || !Number.isFinite(saldo))
+        throw new Error("Confira o nome e o saldo do cartão.");
+      const { error } = await db
         .from("cartoes")
-        .insert({ familia_id: fid, nome, saldo, cor: "claro" })
-        .select("id")
-        .single();
+        .insert({ familia_id: fid, nome: nome.trim(), saldo, cor: "claro" });
       check(error);
-      if (destinado > 0) {
-        const { error: listaError } = await db.from("listas_compras").insert({
-          familia_id: fid,
-          cartao_id: data.id,
-          nome: "Compra do mês",
-          orcamento: destinado,
-          valor_reservado: 0,
-          status: "em_andamento",
-          tipo: "normal",
-        });
-        check(listaError);
-      }
-      await refresh("cartoes", "listas");
+      await refresh("cartoes");
     },
     salvarCartao: async (id, nome, saldo, destinado) => {
       if (
         !nome.trim() ||
         !Number.isFinite(saldo) ||
         saldo < 0 ||
-        !Number.isFinite(destinado) ||
-        destinado < 0 ||
-        destinado > saldo
+        (destinado !== undefined &&
+          (!Number.isFinite(destinado) || destinado < 0 || destinado > saldo))
       )
         throw new Error("O valor destinado deve ser menor ou igual ao saldo.");
       const relacionadas = listas.filter((l) => l.cartao_id === id && l.tipo === "normal");
-      if (relacionadas.length > 1)
+      if (destinado !== undefined && relacionadas.length > 1)
         throw new Error(
           "Há mais de uma lista mensal neste cartão. Ajuste o orçamento diretamente na lista.",
         );
       const listaCartao = relacionadas[0];
-      if (listaCartao && destinado + listaCartao.valor_reservado > saldo)
+      if (listaCartao && destinado !== undefined && destinado + listaCartao.valor_reservado > saldo)
         throw new Error("O orçamento e a reserva ultrapassam o saldo do cartão.");
       const { error } = await db
         .from("cartoes")
@@ -635,23 +613,12 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
         .eq("id", id)
         .eq("familia_id", fid);
       check(error);
-      if (listaCartao) {
+      if (listaCartao && destinado !== undefined) {
         const { error: err } = await db
           .from("listas_compras")
           .update({ orcamento: destinado })
           .eq("id", listaCartao.id)
           .eq("familia_id", fid);
-        check(err);
-      } else if (destinado > 0) {
-        const { error: err } = await db.from("listas_compras").insert({
-          familia_id: fid,
-          cartao_id: id,
-          nome: "Compra do mês",
-          orcamento: destinado,
-          valor_reservado: 0,
-          status: "em_andamento",
-          tipo: "normal",
-        });
         check(err);
       }
       await refresh("cartoes", "listas");

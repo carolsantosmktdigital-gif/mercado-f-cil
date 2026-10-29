@@ -59,6 +59,9 @@ function Lista() {
     online,
   } = useDemo();
   const [cadastroAberto, setCadastroAberto] = useState(false);
+  useEffect(() => {
+    if (window.location.hash === "#nova-lista") setCadastroAberto(true);
+  }, []);
   const [editarNomeLista, setEditarNomeLista] = useState(false);
   const [novoNomeLista, setNovoNomeLista] = useState("");
   const [salvandoNomeLista, setSalvandoNomeLista] = useState(false);

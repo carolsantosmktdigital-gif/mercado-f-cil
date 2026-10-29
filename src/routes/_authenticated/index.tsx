@@ -83,11 +83,11 @@ function Inicio() {
             <p className="text-sm text-muted-foreground">
               {cartoes.length
                 ? "Atualize o saldo do cartão e defina o orçamento para sua compra."
-                : "Cadastre um cartão, informe o saldo disponível e defina o orçamento da compra."}
+                : "Cadastre um cartão e informe o saldo disponível. Depois, crie sua lista e defina o orçamento."}
             </p>
             <Button asChild className="w-full">
               <Link to="/cartoes">
-                {cartoes.length ? "Editar saldo e orçamento" : "Cadastrar cartão e orçamento"}
+                {cartoes.length ? "Editar saldo e orçamento" : "Cadastrar cartão"}
               </Link>
             </Button>
           </div>
@@ -103,6 +103,13 @@ function Inicio() {
       </section>
 
       {(!listas.length || itens.length === 0) && <ShoppingListBuilder />}
+      {listas.length === 0 && (
+        <Button asChild variant="outline" className="mt-3 w-full">
+          <Link to="/lista" hash="nova-lista">
+            Criar lista do zero
+          </Link>
+        </Button>
+      )}
 
       {(listas.length > 0 || abrirNovaLista) && (
         <section id="nova-lista" className="mt-5 scroll-mt-4 rounded-2xl bg-card p-4 shadow-soft">

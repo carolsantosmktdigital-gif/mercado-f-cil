@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { CreditCard, Plus, Pencil, Trash2 } from "lucide-react";
@@ -44,7 +44,6 @@ function Cartoes() {
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   const [nome, setNome] = useState("");
   const [saldo, setSaldo] = useState("");
-  const [destinado, setDestinado] = useState("");
   const savingCard = useRef(false);
   const [salvandoCadastro, setSalvandoCadastro] = useState(false);
 
@@ -56,15 +55,10 @@ function Cartoes() {
       toast.error("Preencha nome e saldo.");
       return;
     }
-    const d = Number(destinado.replace(",", "."));
-    if (!Number.isFinite(d) || d < 0 || d > v) {
-      toast.error("O valor destinado deve estar entre zero e o saldo do cartão.");
-      return;
-    }
     savingCard.current = true;
     setSalvandoCadastro(true);
     try {
-      await addCartao(nome.trim(), v, d);
+      await addCartao(nome.trim(), v);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível cadastrar.");
       return;
@@ -74,23 +68,25 @@ function Cartoes() {
     }
     setNome("");
     setSaldo("");
-    setDestinado("");
     setAberto(false);
     toast.success("Cartão salvo.");
   }
+
+  const listasDoCartao = listas.filter(
+    (lista) => lista.cartao_id === editando?.id && lista.tipo === "normal",
+  );
 
   async function salvarEdicao(e: React.FormEvent) {
     e.preventDefault();
     if (!editando) return;
     const valor = Number(novoSaldo.trim().replace(",", "."));
-    const d = Number(novoDestinado.trim().replace(",", "."));
+    const d =
+      listasDoCartao.length === 1 ? Number(novoDestinado.trim().replace(",", ".")) : undefined;
     if (
       !novoNome.trim() ||
       !Number.isFinite(valor) ||
       valor < 0 ||
-      !Number.isFinite(d) ||
-      d < 0 ||
-      d > valor
+      (d !== undefined && (!Number.isFinite(d) || d < 0 || d > valor))
     ) {
       toast.error("O valor destinado às compras não pode ultrapassar o saldo.");
       return;
@@ -98,7 +94,7 @@ function Cartoes() {
     setSalvandoEdicao(true);
     try {
       await salvarCartao(editando.id, novoNome, valor, d);
-      toast.success("Cartão e orçamento atualizados.");
+      toast.success(d === undefined ? "Cartão atualizado." : "Cartão e orçamento atualizados.");
       setEditando(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível atualizar o cartão.");
@@ -124,10 +120,10 @@ function Cartoes() {
     >
       {cartoes.length === 0 && (
         <div className="mb-4 rounded-2xl bg-accent p-4">
-          <h2 className="font-bold">Comece pelo cartão e pelo orçamento</h2>
+          <h2 className="font-bold">Cadastre seu cartão</h2>
           <p className="mt-2 text-sm">
             Você ainda não tem cartões cadastrados. Preencha abaixo o nome do cartão, o saldo
-            disponível e quanto deseja destinar a esta compra.
+            disponível. Depois, escolha criar uma lista ou gerar uma lista automática.
           </p>
         </div>
       )}
@@ -157,21 +153,10 @@ function Cartoes() {
               placeholder="0,00"
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="cartao-orcamento">Orçamento desta compra (R$)</Label>
-            <Input
-              className="h-12"
-              inputMode="decimal"
-              id="cartao-orcamento"
-              required
-              value={destinado}
-              onChange={(e) => setDestinado(e.target.value)}
-              placeholder="Ex.: 500,00"
-            />
-            <p className="text-xs text-muted-foreground">
-              Este valor será o orçamento da compra mensal.
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            O orçamento será definido quando você criar sua lista. Cadastrar o cartão não cria uma
+            lista.
+          </p>
           <Button
             type="submit"
             disabled={salvandoCadastro}
@@ -204,18 +189,22 @@ function Cartoes() {
             onChange={(e) => setNovoSaldo(e.target.value)}
             required
           />
-          <Label>Valor destinado às compras (R$)</Label>
-          <Input
-            className="h-12"
-            inputMode="decimal"
-            value={novoDestinado}
-            onFocus={(e) => e.currentTarget.select()}
-            onChange={(e) => setNovoDestinado(e.target.value)}
-            required
-          />
-          <p className="text-xs text-muted-foreground">
-            Este valor aparece no card Saldo do orçamento.
-          </p>
+          {listasDoCartao.length === 1 && (
+            <>
+              <Label>Valor destinado às compras (R$)</Label>
+              <Input
+                className="h-12"
+                inputMode="decimal"
+                value={novoDestinado}
+                onFocus={(e) => e.currentTarget.select()}
+                onChange={(e) => setNovoDestinado(e.target.value)}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Orçamento da lista {listasDoCartao[0]?.nome}.
+              </p>
+            </>
+          )}
           <div className="flex gap-2">
             <Button type="submit" disabled={salvandoEdicao} className="flex-1">
               Salvar alterações
@@ -289,6 +278,17 @@ function Cartoes() {
             </div>
           );
         })()}
+      {cartoes.length > 0 && listas.length === 0 && (
+        <section className="mb-5 space-y-3 rounded-3xl bg-card p-5 shadow-soft">
+          <h2 className="font-bold">Como deseja criar sua lista?</h2>
+          <p className="text-sm text-muted-foreground">
+            Seu cartão está cadastrado. Escolha uma opção para começar.
+          </p>
+          <Button asChild>
+            <Link to="/lista">Escolher como criar minha lista</Link>
+          </Button>
+        </section>
+      )}
       <ul className="space-y-4">
         {cartoes.map((c) => (
           <li key={c.id} className={`rounded-3xl p-5 shadow-soft ${estilo[c.cor]}`}>

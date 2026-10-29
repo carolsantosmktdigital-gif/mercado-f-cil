@@ -15,9 +15,11 @@ export function ManualListForm({ onCreated }: { onCreated: () => void }) {
   if (!cartoes.length)
     return (
       <div className="space-y-3">
-        <p className="text-sm">Primeiro, cadastre um cartão e o orçamento da compra.</p>
+        <p className="text-sm">
+          Primeiro, cadastre um cartão. O orçamento será definido ao criar a lista.
+        </p>
         <Button asChild>
-          <Link to="/cartoes">Cadastrar cartão e orçamento</Link>
+          <Link to="/cartoes">Cadastrar cartão</Link>
         </Button>
       </div>
     );
