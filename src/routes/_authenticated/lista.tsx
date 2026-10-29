@@ -444,6 +444,19 @@ function Lista() {
         </div>
       )}
       {listaId && (
+        <div className="mb-4">
+          <ShoppingListBuilder />
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-3 w-full"
+            onClick={() => setCadastroAberto(true)}
+          >
+            Cadastrar outra lista de compras
+          </Button>
+        </div>
+      )}
+      {listaId && (
         <div className="sticky top-0 z-20 -mx-2 bg-background/95 px-2 py-2 backdrop-blur">
           <div className="rounded-3xl bg-emerald-50 px-5 py-4 text-emerald-950 shadow-sm">
             <div className="text-sm font-semibold">
