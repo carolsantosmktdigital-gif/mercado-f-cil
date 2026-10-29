@@ -1,4 +1,5 @@
 import { ThemeChoice } from "@/components/PersonalPreferences";
+import { InstallApp } from "@/components/InstallApp";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -161,6 +162,7 @@ function FamiliaSetup({ userId }: { userId: string }) {
           lista, os cartões e o histórico.
         </p>
       </div>
+      <InstallApp compact />
       <section className="space-y-3 rounded-3xl bg-card p-5 shadow-soft">
         <h2 className="text-lg font-bold">Criar uma família</h2>
         <Label>Nome</Label>
