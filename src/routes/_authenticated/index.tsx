@@ -88,121 +88,129 @@ function Inicio() {
 
       <ShoppingListBuilder />
 
-      <section id="nova-lista" className="mt-5 scroll-mt-4 rounded-2xl bg-card p-4 shadow-soft">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 font-bold">
-            <ShoppingCart className="h-5 w-5" /> Compras em andamento
-          </h2>
-          <Button size="sm" onClick={() => setAbrirNovaLista((v) => !v)}>
-            <Plus className="h-4 w-4" /> Nova lista
-          </Button>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {listas.map((l) => (
-            <div
-              key={l.id}
-              className="flex max-w-full flex-wrap items-center gap-1 rounded-xl border p-1"
-            >
-              <button
-                type="button"
-                onClick={() => selecionarLista(l.id)}
-                className={
-                  "rounded-xl border px-3 py-2 text-sm " +
-                  (listaId === l.id ? "bg-primary text-primary-foreground" : "bg-muted")
-                }
+      {(listas.length > 0 || abrirNovaLista) && (
+        <section id="nova-lista" className="mt-5 scroll-mt-4 rounded-2xl bg-card p-4 shadow-soft">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 font-bold">
+              {listas.length > 0 ? (
+                <>
+                  <ShoppingCart className="h-5 w-5" /> Compras em andamento
+                </>
+              ) : (
+                "Cadastrar lista"
+              )}
+            </h2>
+            {listas.length > 0 ? (
+              <Button size="sm" onClick={() => setAbrirNovaLista((v) => !v)}>
+                <Plus className="h-4 w-4" /> Nova lista
+              </Button>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={() => setAbrirNovaLista(false)}>
+                Cancelar
+              </Button>
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {listas.map((l) => (
+              <div
+                key={l.id}
+                className="flex max-w-full flex-wrap items-center gap-1 rounded-xl border p-1"
               >
-                {l.nome}
-              </button>
-              <DuplicateListButton
-                origem={l.id}
-                nome={l.nome}
-                cartaoId={l.cartao_id}
-                orcamento={l.orcamento}
-              />
-              <DeleteListButton id={l.id} nome={l.nome} />
+                <button
+                  type="button"
+                  onClick={() => selecionarLista(l.id)}
+                  className={
+                    "rounded-xl border px-3 py-2 text-sm " +
+                    (listaId === l.id ? "bg-primary text-primary-foreground" : "bg-muted")
+                  }
+                >
+                  {l.nome}
+                </button>
+                <DuplicateListButton
+                  origem={l.id}
+                  nome={l.nome}
+                  cartaoId={l.cartao_id}
+                  orcamento={l.orcamento}
+                />
+                <DeleteListButton id={l.id} nome={l.nome} />
+              </div>
+            ))}
+          </div>
+          {abrirNovaLista && cartoes.length === 0 && (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm">Primeiro, cadastre um cartão e o orçamento da compra.</p>
+              <Button asChild>
+                <Link to="/cartoes">Cadastrar cartão e orçamento</Link>
+              </Button>
             </div>
-          ))}
-        </div>
-        {!listas.length && !abrirNovaLista && (
-          <p className="mt-3 text-sm text-muted-foreground">
-            Você ainda não tem uma lista de compras. Gere uma lista automática acima ou toque em
-            Nova lista para começar.
-          </p>
-        )}
-        {abrirNovaLista && cartoes.length === 0 && (
-          <div className="mt-4 space-y-3">
-            <p className="text-sm">Primeiro, cadastre um cartão e o orçamento da compra.</p>
-            <Button asChild>
-              <Link to="/cartoes">Cadastrar cartão e orçamento</Link>
-            </Button>
-          </div>
-        )}
-        {abrirNovaLista && cartoes.length > 0 && (
-          <form
-            className="mt-4 space-y-3"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setCriando(true);
-              try {
-                await criarLista(
-                  nomeLista.trim(),
-                  cartaoId,
-                  Number(valorLista.replace(",", ".")),
-                  0,
-                );
-                setAbrirNovaLista(false);
-                setNomeLista("");
-                setValorLista("");
-                toast.success("Lista criada.");
-              } catch {
-                toast.error("Não foi possível criar a lista.");
-              } finally {
-                setCriando(false);
-              }
-            }}
-          >
-            <Input
-              required
-              placeholder="Nome da lista"
-              value={nomeLista}
-              onChange={(e) => setNomeLista(e.target.value)}
-            />
-            <select
-              required
-              className="h-12 w-full rounded-xl border bg-background px-3"
-              value={cartaoId}
-              onChange={(e) => setCartaoId(e.target.value)}
+          )}
+          {abrirNovaLista && cartoes.length > 0 && (
+            <form
+              className="mt-4 space-y-3"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setCriando(true);
+                try {
+                  await criarLista(
+                    nomeLista.trim(),
+                    cartaoId,
+                    Number(valorLista.replace(",", ".")),
+                    0,
+                  );
+                  setAbrirNovaLista(false);
+                  setNomeLista("");
+                  setValorLista("");
+                  toast.success("Lista criada.");
+                } catch {
+                  toast.error("Não foi possível criar a lista.");
+                } finally {
+                  setCriando(false);
+                }
+              }}
             >
-              <option value="">Selecione um cartão</option>
-              {cartoes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome} · {brl(c.saldo)}
-                </option>
-              ))}
-            </select>
-            <Input
-              required
-              inputMode="decimal"
-              placeholder="Valor destinado às compras (R$)"
-              value={valorLista}
-              onChange={(e) => setValorLista(e.target.value)}
-            />
-            <Button disabled={criando} type="submit" className="w-full">
-              Criar lista
-            </Button>
-          </form>
-        )}
-        {listaId && (
-          <div className="mt-4">
-            <BudgetCard />
-            <Button asChild className="mt-4 w-full">
-              <Link to="/lista">
-                Continuar compra <ChevronRight className="h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
-        )}
-      </section>
+              <Input
+                required
+                placeholder="Nome da lista"
+                value={nomeLista}
+                onChange={(e) => setNomeLista(e.target.value)}
+              />
+              <select
+                required
+                className="h-12 w-full rounded-xl border bg-background px-3"
+                value={cartaoId}
+                onChange={(e) => setCartaoId(e.target.value)}
+              >
+                <option value="">Selecione um cartão</option>
+                {cartoes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome} · {brl(c.saldo)}
+                  </option>
+                ))}
+              </select>
+              <Input
+                required
+                inputMode="decimal"
+                placeholder="Valor destinado às compras (R$)"
+                value={valorLista}
+                onChange={(e) => setValorLista(e.target.value)}
+              />
+              <Button disabled={criando} type="submit" className="w-full">
+                Criar lista
+              </Button>
+            </form>
+          )}
+          {listaId && (
+            <div className="mt-4">
+              <BudgetCard />
+              <Button asChild className="mt-4 w-full">
+                <Link to="/lista">
+                  Continuar compra <ChevronRight className="h-5 w-5" />
+                </Link>
+              </Button>
+            </div>
+          )}
+        </section>
+      )}
 
       <h2 className="mb-3 mt-8 text-xl font-bold">Acesso rápido</h2>
       <div className="grid grid-cols-2 gap-3">
