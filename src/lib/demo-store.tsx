@@ -1,3 +1,4 @@
+import type { TemplateItem } from "./shopping-templates";
 import { categoryName, validateCategory } from "./categories";
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -84,7 +85,14 @@ type Store = {
   listas: ListaCompras[];
   listaId: string;
   selecionarLista: (id: string) => void;
-  criarLista: (nome: string, cartaoId: string, orcamento: number, reserva: number) => Promise<void>;
+  criarLista: (
+    nome: string,
+    cartaoId: string,
+    orcamento: number,
+    reserva: number,
+    produtos?: TemplateItem[],
+    requestId?: string,
+  ) => Promise<void>;
   atualizarOrcamento: (valor: number) => Promise<void>;
   renomearLista: (id: string, nome: string) => Promise<void>;
   itens: ItemLista[];
@@ -584,16 +592,32 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       check(error);
       await refresh("cartoes", "listas");
     },
-    criarLista: async (nome, cartaoId, orcamento, reserva) => {
+    criarLista: async (nome, cartaoId, orcamento, reserva, produtos, requestId) => {
       const card = cartoes.find((c) => c.id === cartaoId);
       if (
         !card ||
         !nome.trim() ||
+        !Number.isFinite(orcamento) ||
+        !Number.isFinite(reserva) ||
         orcamento <= 0 ||
         reserva < 0 ||
         orcamento + reserva > card.saldo
       ) {
-        toast.error("Confira o cartão, o orçamento e a reserva.");
+        throw new Error("Confira o cartão, o orçamento e a reserva.");
+      }
+      if (produtos) {
+        const id = requestId || crypto.randomUUID();
+        const { error } = await db.rpc("criar_lista_personalizada", {
+          _id: id,
+          _familia: fid,
+          _cartao: cartaoId,
+          _nome: nome.trim(),
+          _orcamento: orcamento,
+          _itens: produtos,
+        });
+        check(error);
+        await refresh("listas", "itens");
+        setSelectedId(id);
         return;
       }
       const { data, error } = await db
