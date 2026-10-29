@@ -167,7 +167,7 @@ it("retries a lost finalization response without subtracting the local card twic
   await waitFor(() => expect(readLocal("f1").pending).toHaveLength(0));
   expect(hook.result.current.cartoes[0]?.saldo).toBe(30);
   expect(rpc.mock.calls[0]).toEqual(rpc.mock.calls[1]);
-  expect(rpc.mock.calls[0]?.[0]).toBe("finalizar_compra_offline");
+  expect(rpc.mock.calls[0]?.[0]).toBe("finalizar_compra_compartilhada");
 });
 
 it("edits only the selected history receipt offline and restores its corrected card balance", async () => {

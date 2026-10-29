@@ -1,3 +1,4 @@
+import { shoppingSnapshot, useSharedShopping } from "./shared-shopping";
 import type { TemplateItem } from "./shopping-templates";
 import { categoryName, validateCategory } from "./categories";
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
@@ -11,6 +12,9 @@ import {
   overlayItems,
   flushWrites,
   type PendingWrite,
+  ItemConflictError,
+  resolveWrite,
+  reopenFinalization,
 } from "./offline";
 import { historyTotal, validateHistoryItems, type HistoryItem } from "./history";
 import type { PurchaseAnalysis } from "./analysis";
@@ -72,6 +76,9 @@ export const totalItem = (i: ItemLista) =>
 const db = supabase as any;
 
 type Store = {
+  conflitos: PendingWrite[];
+  resolverConflito: (id: string, manterLocal: boolean) => Promise<void>;
+  compartilhamento: { connected: boolean; peers: number; peerPending: number };
   categorias: string[];
   criarCategoria: (nome: string) => Promise<string>;
   analises: PurchaseAnalysis[];
@@ -116,6 +123,7 @@ type Store = {
   updateItem: (
     id: string,
     patch: Partial<Pick<ItemLista, "nome" | "setor" | "qtd" | "preco">>,
+    base?: Record<string, unknown>,
   ) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   importarListaPadrao: () => Promise<number>;
@@ -168,22 +176,48 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
   const [pendingCount, setPendingCount] = useState(() => readLocal(fid).pending.length);
   const [syncError, setSyncError] = useState("");
   const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
+  const [conflitos, setConflitos] = useState(() =>
+    readLocal(fid).pending.filter((p) => p.conflict),
+  );
   async function syncPending() {
     try {
-      const hadFinalization = readLocal(fid).pending.some(
-        (op) => op.kind === "finalize" || op.kind === "history" || op.kind === "category",
-      );
+      const hadFinalization = readLocal(fid).pending.length > 0;
       await flushWrites(fid, async (op: PendingWrite) => {
         if (op.kind === "finalize") {
-          const { error } = await db.rpc("finalizar_compra_offline", {
-            _lista_id: op.listaId,
-            _operacao_id: op.id,
-            _pendencias_id: op.values["pendenciasId"],
-            _total_previsto: op.values["total"],
-            _qtd_prevista: op.values["quantidade"],
-            _data_compra: op.values["data"],
-          });
-          if (error) throw error;
+          const { error } = op.values["snapshot"]
+            ? await db.rpc("finalizar_compra_compartilhada", {
+                _lista: op.listaId,
+                _operacao: op.id,
+                _pendencias: op.values["pendenciasId"],
+                _data: op.values["data"],
+                _itens: op.values["snapshot"],
+              })
+            : await db.rpc("finalizar_compra_offline", {
+                _lista_id: op.listaId,
+                _operacao_id: op.id,
+                _pendencias_id: op.values["pendenciasId"],
+                _total_previsto: op.values["total"],
+                _qtd_prevista: op.values["quantidade"],
+                _data_compra: op.values["data"],
+              });
+          if (error) {
+            if (error.code !== "P0001") throw error;
+            const { data: existing, error: lookupError } = await db
+              .from("compras")
+              .select("id")
+              .eq("lista_id", op.listaId)
+              .eq("familia_id", fid)
+              .maybeSingle();
+            if (!lookupError && existing) {
+              toast.info(
+                "Esta compra já foi finalizada. O saldo e o histórico serão atualizados pela nuvem.",
+              );
+              return;
+            }
+            if (error.code === "P0001")
+              throw new ItemConflictError({ motivo: error.message, bloqueado: true });
+            throw error;
+          }
           return;
         }
         if (op.kind === "history") {
@@ -207,32 +241,21 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
           if (error) throw error;
           return;
         }
-        let request;
-        if (op.kind === "insert")
-          request = db
-            .from("itens_lista")
-            .upsert(
-              { ...op.values, id: op.itemId, familia_id: fid, lista_id: op.listaId },
-              { onConflict: "id" },
-            );
-        else if (op.kind === "delete")
-          request = db
-            .from("itens_lista")
-            .delete()
-            .eq("id", op.itemId)
-            .eq("lista_id", op.listaId)
-            .eq("familia_id", fid);
-        else
-          request = db
-            .from("itens_lista")
-            .update(op.values)
-            .eq("id", op.itemId)
-            .eq("lista_id", op.listaId)
-            .eq("familia_id", fid)
-            .select("id")
-            .single();
-        const { error } = await request;
+        const { data: outcome, error } = await db.rpc("escrever_item_compartilhado", {
+          _operacao: op.id,
+          _familia: fid,
+          _lista: op.listaId,
+          _item: op.itemId,
+          _tipo: op.kind,
+          _valores: Object.fromEntries(
+            Object.entries(op.values).filter(([key]) =>
+              ["nome", "setor", "qtd", "preco", "comprado", "inesperado"].includes(key),
+            ),
+          ),
+          _base: op.base || null,
+        });
         if (error) throw error;
+        if (outcome?.conflito) throw new ItemConflictError(outcome);
         if (op.kind === "insert") {
           const known = qc.getQueryData<ProdutoCatalogo[]>(["produtos", fid]) || [];
           if (
@@ -275,7 +298,11 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
     }
   }
   useEffect(() => {
-    const changed = () => setPendingCount(readLocal(fid).pending.length);
+    const changed = () => {
+      const pending = readLocal(fid).pending;
+      setPendingCount(pending.length);
+      setConflitos(pending.filter((p) => p.conflict));
+    };
     const connection = () => {
       setOnline(navigator.onLine);
       if (navigator.onLine) void syncPending();
@@ -339,6 +366,7 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
     ? selectedId
     : listas.find((l) => l.tipo === "normal")?.id || listas[0]?.id || "";
   const lista = listas.find((l) => l.id === listaId);
+  const shared = useSharedShopping(fid, listaId, pendingCount, syncPending);
   const itensQ = useLocalQuery<ItemLista[]>(fid, {
     queryKey: ["itens", fid, listaId],
     enabled: !!listaId,
@@ -452,17 +480,47 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
   const refresh = async (...keys: string[]) => {
     await Promise.all(keys.map((k) => qc.invalidateQueries({ queryKey: [k, fid] })));
   };
-  function writeItem(id: string, kind: PendingWrite["kind"], values: Record<string, unknown>) {
+  function writeItem(
+    id: string,
+    kind: PendingWrite["kind"],
+    values: Record<string, unknown>,
+    expected?: Record<string, unknown>,
+  ) {
     const key = ["itens", fid, listaId];
     void qc.cancelQueries({ queryKey: key });
     const current = qc.getQueryData<ItemLista[]>(key) || [];
-    const op = { id: crypto.randomUUID(), listaId, itemId: id, kind, values };
+    const previous = current.find((i) => i.id === id);
+    const fields =
+      kind === "delete"
+        ? ["nome", "setor", "qtd", "preco", "comprado", "inesperado"]
+        : Object.keys(values);
+    const base =
+      expected ||
+      Object.fromEntries(
+        fields.map((k) => [k, (previous as any)?.[k] ?? (k === "inesperado" ? false : null)]),
+      );
+    const op: PendingWrite = { id: crypto.randomUUID(), listaId, itemId: id, kind, values, base };
     const next = overlayItems(current, [op], listaId);
     enqueue(fid, op, key, next);
     qc.setQueryData(key, next);
     void syncPending();
   }
   const store: Store = {
+    conflitos,
+    compartilhamento: shared,
+    resolverConflito: async (id, manterLocal) => {
+      if (!navigator.onLine) throw new Error("Conecte-se para resolver esta alteração.");
+      const op = readLocal(fid).pending.find((p) => p.id === id);
+      if (op?.kind === "finalize") {
+        reopenFinalization(fid, id);
+        for (const key of ["listas", "cartoes", "compras"])
+          qc.setQueryData([key, fid], cached(fid, [key, fid]));
+        qc.setQueryData(["itens", fid, op.listaId], cached(fid, ["itens", fid, op.listaId]));
+        setSelectedId(op.listaId);
+      } else resolveWrite(fid, id, manterLocal);
+      await syncPending();
+      await refresh("itens", "listas", "cartoes", "compras");
+    },
     categorias,
     criarCategoria: async (valor) => {
       const nome = validateCategory(valor);
@@ -719,7 +777,7 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       }
       writeItem(id, "update", { comprado: !item.comprado });
     },
-    updateItem: async (id, patch) => {
+    updateItem: async (id, patch, base) => {
       const item = (qc.getQueryData<ItemLista[]>(["itens", fid, listaId]) || []).find(
         (i) => i.id === id,
       );
@@ -733,7 +791,7 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
         updated.preco < 0
       )
         throw new Error("Confira os dados do produto.");
-      writeItem(id, "update", patch);
+      writeItem(id, "update", patch, base);
     },
     removeItem: async (id) => {
       writeItem(id, "delete", {});
@@ -880,6 +938,44 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       void syncPending();
     },
     finalizarCompra: async () => {
+      if (navigator.onLine) {
+        const viewed = shoppingSnapshot(
+          qc.getQueryData<ItemLista[]>(["itens", fid, listaId]) || [],
+        );
+        await syncPending();
+        if (readLocal(fid).pending.length)
+          throw new Error("Resolva as alterações pendentes antes de finalizar a compra.");
+        await shared.checkPeers();
+        const shown = qc.getQueryData<ItemLista[]>(["itens", fid, listaId]) || [];
+        const { data: remote, error: fetchError } = await db
+          .from("itens_lista")
+          .select("*")
+          .eq("familia_id", fid)
+          .eq("lista_id", listaId)
+          .order("created_at")
+          .order("id");
+        check(fetchError);
+        if (viewed !== shoppingSnapshot(remote || [])) {
+          saveCache(fid, ["itens", fid, listaId], remote || []);
+          qc.setQueryData(["itens", fid, listaId], remote || []);
+          await refresh("listas", "cartoes");
+          throw new Error(
+            "A lista foi atualizada com as alterações do outro celular. Confira o total e finalize novamente.",
+          );
+        }
+        const now = new Date();
+        const { error } = await db.rpc("finalizar_compra_compartilhada", {
+          _lista: listaId,
+          _operacao: crypto.randomUUID(),
+          _pendencias: crypto.randomUUID(),
+          _data: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+          _itens: shown,
+        });
+        await refresh("listas", "itens", "cartoes", "compras", "analises");
+        check(error);
+        toast.success("Compra finalizada e saldo sincronizado na nuvem.");
+        return;
+      }
       const currentLists = qc.getQueryData<ListaCompras[]>(["listas", fid]) || [];
       const currentList = currentLists.find((l) => l.id === listaId);
       if (!currentList) throw new Error("Esta lista já foi finalizada ou não está disponível.");
@@ -918,6 +1014,7 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
           pendenciasId,
           data,
           produtos: purchased,
+          snapshot: currentItems,
           lista: currentList,
           cartao: card.nome,
         },

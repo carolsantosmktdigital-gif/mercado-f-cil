@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useDemo } from "@/lib/demo-store";
 import type { ReactNode } from "react";
@@ -73,15 +75,106 @@ export function DemoBadge({
 }
 
 function SyncStatus() {
-  const { online, pendingCount, syncError } = useDemo();
-  if (online && !pendingCount && !syncError) return null;
+  const {
+    online,
+    pendingCount,
+    syncError,
+    conflitos = [],
+    resolverConflito,
+    compartilhamento,
+  } = useDemo();
   return (
-    <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">
-      {syncError ||
-        (!online
-          ? "Sem internet. Alterações e saldos ficam salvos neste celular."
-          : "Sincronizando alterações…")}{" "}
-      {pendingCount > 0 ? `${pendingCount} operação(ões) aguardando sincronização.` : ""}
-    </p>
+    <div className="mb-4 space-y-2">
+      {online && compartilhamento && (
+        <p role="status" className="rounded-xl bg-emerald-50 p-3 text-xs text-emerald-950">
+          {compartilhamento.connected
+            ? "Lista conectada · atualizações automáticas"
+            : "Reconectando · conferindo alterações a cada 3 segundos"}
+          {compartilhamento.peers > 0 &&
+            ` · ${compartilhamento.peers} outro(s) celular(es) nesta lista`}
+          {compartilhamento.peerPending > 0 && " · aguardando alterações do outro celular"}
+        </p>
+      )}
+      {(!online || pendingCount > 0 || syncError) && (
+        <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-950">
+          {syncError ||
+            (!online
+              ? "Sem internet. Alterações e saldos ficam salvos neste celular. O outro celular só verá suas mudanças após sincronizar."
+              : "Sincronizando alterações…")}{" "}
+          {pendingCount > 0 && `${pendingCount} operação(ões) aguardando sincronização.`}
+        </p>
+      )}
+      {conflitos.map((op) => (
+        <div
+          key={op.id}
+          role="alert"
+          className="space-y-2 rounded-xl border border-orange-300 bg-orange-50 p-3 text-sm text-orange-950"
+        >
+          <p className="font-bold">
+            {op.kind === "finalize"
+              ? "Confira a finalização"
+              : `Alteração em conflito: ${String(op.conflict?.atual?.["nome"] || op.values["nome"] || "produto")}`}
+          </p>
+          <p>{op.conflict?.motivo}</p>
+          {op.kind !== "finalize" && (
+            <>
+              <p className="break-words">
+                Neste celular: {op.kind === "delete" ? "Excluir produto" : formatChange(op.values)}
+              </p>
+              {op.conflict?.atual && (
+                <p className="break-words">
+                  Na nuvem:{" "}
+                  {formatChange(
+                    Object.fromEntries(
+                      Object.keys(op.values).map((k) => [k, op.conflict!.atual![k]]),
+                    ),
+                  )}
+                </p>
+              )}
+            </>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {!op.conflict?.bloqueado && (
+              <Button
+                disabled={!online}
+                size="sm"
+                onClick={() =>
+                  void resolverConflito(op.id, true).catch((e) => toast.error(e.message))
+                }
+              >
+                Usar minha alteração
+              </Button>
+            )}
+            <Button
+              disabled={!online}
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                void resolverConflito(op.id, false).catch((e) => toast.error(e.message))
+              }
+            >
+              {op.kind === "finalize" ? "Reabrir e conferir" : "Manter informação da nuvem"}
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
   );
+}
+function formatChange(values: Record<string, unknown>) {
+  const labels: Record<string, string> = {
+    nome: "Nome",
+    setor: "Categoria",
+    qtd: "Quantidade",
+    preco: "Preço",
+    comprado: "No carrinho",
+    inesperado: "Extra",
+  };
+  return Object.entries(values)
+    .filter(([k]) => labels[k])
+    .map(
+      ([k, v]) =>
+        `${labels[k]}: ${k === "preco" ? Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : typeof v === "boolean" ? (v ? "Sim" : "Não") : String(v ?? "—")}`,
+    )
+    .join(" · ");
 }

@@ -1,4 +1,4 @@
-const CACHE = "mercado-shell-v6";
+const CACHE = "mercado-shell-v7";
 const pages = ["/", "/lista", "/cartoes", "/adicionar", "/historico", "/analise"];
 self.addEventListener("install", (event) => {
   event.waitUntil(

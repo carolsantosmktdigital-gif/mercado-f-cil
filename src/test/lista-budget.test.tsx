@@ -61,3 +61,17 @@ it("retains the same product DOM position when edited data arrives in a differen
   );
   expect(screen.getByLabelText("Preço de Feijão")).toBe(field);
 });
+it("preserves an active draft during peer updates and sends the original field baseline", () => {
+  const ui = setup(0);
+  const field = screen.getByLabelText("Preço de Feijão");
+  fireEvent.focus(field);
+  fireEvent.change(field, { target: { value: "8,50" } });
+  state.current = {
+    ...state.current,
+    itens: state.current.itens.map((i: any) => (i.id === "two" ? { ...i, preco: 9 } : i)),
+  };
+  ui.rerender(createElement(Route.options.component as any));
+  expect(screen.getByLabelText("Preço de Feijão")).toHaveValue("8,50");
+  fireEvent.blur(field);
+  expect(state.current.updateItem).toHaveBeenCalledWith("two", { preco: 8.5 }, { preco: 0 });
+});

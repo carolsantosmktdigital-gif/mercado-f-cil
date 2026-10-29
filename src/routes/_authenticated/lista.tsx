@@ -13,7 +13,7 @@ import {
   ListChecks,
   LayoutGrid,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Page } from "@/components/AppShell";
@@ -65,14 +65,44 @@ function Lista() {
   const [setorFiltro, setSetorFiltro] = useState("Todos");
   const [editando, setEditando] = useState<string | null>(null);
   const [edicao, setEdicao] = useState({ nome: "", setor: "Mercearia" });
+  const draftStatus = (dirty: boolean) =>
+    window.dispatchEvent(
+      new CustomEvent("mercado-shopping-draft", { detail: { lista: listaId, dirty } }),
+    );
+  useEffect(
+    () => () => {
+      draftStatus(false);
+    },
+    [listaId],
+  );
+  const foco = useRef<{ id: string; campo: "qtd" | "preco"; base: number } | null>(null);
+  const produtoBase = useRef<Record<string, unknown>>({});
+  const [finalizando, setFinalizando] = useState(false);
   const [rascunhos, setRascunhos] = useState<Record<string, { qtd: string; preco: string }>>({});
   useEffect(() => {
-    setRascunhos(
+    if (foco.current && !itens.some((i) => i.id === foco.current!.id)) {
+      toast.info(
+        "O produto em edição foi retirado da lista em outro celular. Confira a lista atualizada.",
+      );
+      foco.current = null;
+      draftStatus(false);
+    }
+    setRascunhos((previous) =>
       Object.fromEntries(
-        itens.map((i) => [i.id, { qtd: String(i.qtd), preco: i.preco ? String(i.preco) : "" }]),
+        itens.map((i) => {
+          const draft = { qtd: String(i.qtd), preco: i.preco ? String(i.preco) : "" };
+          const active = foco.current;
+          if (active?.id === i.id && previous[i.id])
+            draft[active.campo] = previous[i.id]![active.campo];
+          return [i.id, draft];
+        }),
       ),
     );
   }, [itens]);
+  useEffect(() => {
+    foco.current = null;
+    setRascunhos({});
+  }, [listaId]);
   /* A criação de listas fica exclusivamente na página inicial. */
   const [importando, setImportando] = useState(false);
   const [modeloCarregado, setModeloCarregado] = useState<Record<string, boolean>>({});
@@ -101,6 +131,12 @@ function Lista() {
     level === "danger" ? "bg-red-600" : level === "warning" ? "bg-orange-500" : "bg-emerald-800";
   async function salvarCampo(id: string, campo: "qtd" | "preco") {
     const valor = Number((rascunhos[id]?.[campo] || "").replace(",", "."));
+    const base =
+      foco.current?.id === id && foco.current.campo === campo
+        ? { [campo]: foco.current.base }
+        : undefined;
+    foco.current = null;
+    draftStatus(false);
     if (!Number.isFinite(valor) || (campo === "qtd" ? valor < 0 : valor < 0)) {
       toast.error("Valor inválido.");
       return;
@@ -112,7 +148,8 @@ function Lista() {
         return;
       }
       if (itens.find((i) => i.id === id)?.[campo] === valor) return;
-      await updateItem(id, { [campo]: valor });
+      if (base) await updateItem(id, { [campo]: valor }, base);
+      else await updateItem(id, { [campo]: valor });
     } catch {
       toast.error("Não foi possível salvar a alteração.");
     }
@@ -127,7 +164,11 @@ function Lista() {
         inputMode="decimal"
         placeholder={tipo === "preco" ? "R$ 0,00" : "Quantidade"}
         value={rascunhos[i.id]?.[tipo] ?? atual}
-        onFocus={(e) => e.currentTarget.select()}
+        onFocus={(e) => {
+          foco.current = { id: i.id, campo: tipo, base: i[tipo] };
+          draftStatus(true);
+          e.currentTarget.select();
+        }}
         onClick={(e) => e.currentTarget.select()}
         onChange={(e) =>
           setRascunhos((p) => ({
@@ -225,6 +266,8 @@ function Lista() {
                         aria-label={"Editar setor de " + i.nome}
                         className="w-full break-words text-left text-xs font-medium leading-tight sm:text-sm"
                         onClick={() => {
+                          draftStatus(true);
+                          produtoBase.current = { nome: i.nome, setor: i.setor };
                           setSetorEditando(i.id);
                           setNomeEditando(i.nome);
                           setCategoriaEditando(i.setor);
@@ -507,11 +550,16 @@ function Lista() {
                   }
                   setSalvandoProduto(true);
                   try {
-                    await updateItem(item.id, {
-                      nome,
-                      setor: categoriaEditando as typeof item.setor,
-                    });
+                    await updateItem(
+                      item.id,
+                      {
+                        nome,
+                        setor: categoriaEditando as typeof item.setor,
+                      },
+                      produtoBase.current,
+                    );
                     toast.success("Produto atualizado.");
+                    draftStatus(false);
                     setSetorEditando(null);
                   } catch {
                     toast.error("Não foi possível atualizar o produto.");
@@ -541,7 +589,14 @@ function Lista() {
                   <Button type="submit" className="flex-1" disabled={salvandoProduto}>
                     {salvandoProduto ? "Salvando..." : "Salvar alterações"}
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => setSetorEditando(null)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      draftStatus(false);
+                      setSetorEditando(null);
+                    }}
+                  >
                     Cancelar
                   </Button>
                 </div>
@@ -590,19 +645,31 @@ function Lista() {
         </div>
       )}
       {listaId && aba === "carrinho" && (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Comprando juntos? Mantenham os dois celulares conectados e o app aberto antes de
+          finalizar. Alterações de um celular sem internet só chegam após a sincronização.
+        </p>
+      )}
+      {listaId && aba === "carrinho" && (
         <Button
           size="lg"
           className="mt-4 h-14 w-full rounded-2xl text-base"
-          disabled={!itens.some((i) => i.comprado)}
-          onClick={() =>
-            finalizarCompra().catch((error) =>
+          disabled={finalizando || !itens.some((i) => i.comprado)}
+          onClick={async () => {
+            if (finalizando) return;
+            setFinalizando(true);
+            try {
+              await finalizarCompra();
+            } catch (error) {
               toast.error(
                 error instanceof Error ? error.message : "Não foi possível finalizar a compra.",
-              ),
-            )
-          }
+              );
+            } finally {
+              setFinalizando(false);
+            }
+          }}
         >
-          Finalizar compra (itens marcados)
+          {finalizando ? "Conferindo e finalizando…" : "Finalizar compra (itens marcados)"}
         </Button>
       )}
     </Page>
