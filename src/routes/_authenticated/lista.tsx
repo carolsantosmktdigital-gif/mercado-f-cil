@@ -121,12 +121,6 @@ function Lista() {
   const totalCarrinho = carrinho.reduce((s, i) => s + totalItem(i), 0);
   const budget = Number(listas.find((l) => l.id === listaId)?.orcamento || 0);
   const { remaining, percent, level } = budgetState(budget, totalCarrinho);
-  const balanceClass =
-    level === "danger"
-      ? "text-red-700 font-bold"
-      : level === "warning"
-        ? "text-orange-700 font-bold"
-        : "";
   const barClass =
     level === "danger" ? "bg-red-600" : level === "warning" ? "bg-orange-500" : "bg-emerald-800";
   async function salvarCampo(id: string, campo: "qtd" | "preco") {
@@ -528,12 +522,7 @@ function Lista() {
               <span>
                 Gasto: <strong>{brl(totalCarrinho)}</strong>
               </span>
-              <span
-                className={
-                  balanceClass +
-                  (level !== "normal" ? ` budget-remaining budget-remaining-${level}` : "")
-                }
-              >
+              <span>
                 Restante: <strong>{budget > 0 ? brl(remaining) : "A definir"}</strong>
               </span>
             </div>
