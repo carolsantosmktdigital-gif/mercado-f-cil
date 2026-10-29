@@ -25,8 +25,8 @@ it("shows purchased items, opens editing and submits decimal prices for that rec
   const save = vi.fn(async () => {});
   render(<PurchaseDetails compra={purchase} onClose={() => {}} onSave={save} />);
   expect(screen.getByRole("dialog")).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Arroz" })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Editar itens" }));
+  expect(screen.getByRole("button", { name: "Editar Arroz" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Editar Arroz" }));
   fireEvent.change(screen.getByLabelText("Preço do produto 1"), { target: { value: "30,50" } });
   expect(screen.getByText(/a devolver ao cartão/)).toHaveTextContent("9,00");
   fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
@@ -39,7 +39,7 @@ it("shows purchased items, opens editing and submits decimal prices for that rec
 it("cancel leaves saved receipt and balance untouched", () => {
   const save = vi.fn(async () => {});
   render(<PurchaseDetails compra={purchase} onClose={() => {}} onSave={save} />);
-  fireEvent.click(screen.getByRole("button", { name: "Editar itens" }));
+  fireEvent.click(screen.getByRole("button", { name: "Editar Arroz" }));
   fireEvent.change(screen.getByLabelText("Preço do produto 1"), { target: { value: "50" } });
   fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
   expect(save).not.toHaveBeenCalled();
@@ -48,7 +48,7 @@ it("cancel leaves saved receipt and balance untouched", () => {
 it("does not save empty receipts or invalid prices", () => {
   const save = vi.fn(async () => {});
   render(<PurchaseDetails compra={purchase} onClose={() => {}} onSave={save} />);
-  fireEvent.click(screen.getByRole("button", { name: "Editar itens" }));
+  fireEvent.click(screen.getByRole("button", { name: "Editar Arroz" }));
   fireEvent.change(screen.getByLabelText("Preço do produto 1"), { target: { value: "-1" } });
   expect(screen.getByRole("button", { name: "Salvar alterações" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "Remover produto 1" }));
@@ -58,7 +58,6 @@ it("does not save empty receipts or invalid prices", () => {
 it("can add a missing purchased item without editing another receipt", async () => {
   const save = vi.fn(async () => {});
   render(<PurchaseDetails compra={purchase} onClose={() => {}} onSave={save} />);
-  fireEvent.click(screen.getByRole("button", { name: "Editar itens" }));
   fireEvent.click(screen.getByRole("button", { name: "Adicionar produto comprado" }));
   fireEvent.change(screen.getByLabelText("Nome do produto 2"), { target: { value: "Feijão" } });
   fireEvent.change(screen.getByLabelText("Preço do produto 2"), { target: { value: "5" } });
@@ -91,6 +90,22 @@ it("opens the items of the exact purchase selected in history", () => {
   render(createElement(HistoryRoute.options.component as any));
   fireEvent.click(screen.getByRole("button", { name: "Ver itens de Compra Outubro" }));
   expect(screen.getByRole("dialog")).toHaveAccessibleName("Compra Outubro");
-  expect(screen.getByRole("heading", { name: "Arroz" })).toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: "Feijão" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Editar Arroz" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Editar Feijão" })).not.toBeInTheDocument();
+});
+
+it("edits only the chosen row and preserves other products", async () => {
+  const other = { id: "beans", nome: "Feijão", setor: "Mercearia", qtd: 1, preco: 5 };
+  const compra = { ...purchase, total: 75, itens: 2, produtos: [...purchase.produtos!, other] };
+  const save = vi.fn(async () => {});
+  render(<PurchaseDetails compra={compra} onClose={() => {}} onSave={save} />);
+  expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Editar Feijão" }));
+  expect(screen.queryByLabelText("Nome do produto 1")).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Preço do produto 2"), { target: { value: "6" } });
+  fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+  await waitFor(() =>
+    expect(save).toHaveBeenCalledWith(compra, [purchase.produtos![0], { ...other, preco: 6 }]),
+  );
+  expect(screen.getByRole("button", { name: "Editar Arroz" })).toBeInTheDocument();
 });

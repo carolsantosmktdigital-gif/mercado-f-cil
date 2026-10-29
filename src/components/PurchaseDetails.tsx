@@ -26,6 +26,7 @@ export function PurchaseDetails({
 }) {
   const [editing, setEditing] = useState(false),
     [saving, setSaving] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [snapshot, setSnapshot] = useState(compra);
   const panel = useRef<HTMLElement>(null);
@@ -45,7 +46,8 @@ export function PurchaseDetails({
     );
   const newTotal = draftValid ? historyTotal(draftItems) : null;
   const difference = newTotal === null ? 0 : Math.round((newTotal - snapshot.total) * 100) / 100;
-  function startEditing() {
+  function startEditing(id: string | null) {
+    setSelectedId(id);
     setSnapshot(compra);
     setDrafts(
       (compra.produtos || []).map((i) => ({ ...i, qtd: String(i.qtd), preco: String(i.preco) })),
@@ -71,13 +73,13 @@ export function PurchaseDetails({
     }
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-2 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-background">
       <section
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-labelledby="purchase-title"
-        className="max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-background p-5 shadow-xl"
+        className="min-h-full w-full max-w-lg bg-background px-3 py-5 sm:p-5"
         onKeyDown={(e) => {
           if (e.key === "Escape" && !saving) {
             onClose();
@@ -133,24 +135,54 @@ export function PurchaseDetails({
                 Conecte-se à internet para carregar os itens desta compra pela primeira vez.
               </p>
             ) : (
-              <ul className="mt-5 space-y-3" aria-label="Produtos comprados">
-                {compra.produtos.map((item) => (
-                  <li key={item.id} className="rounded-2xl border bg-card p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="break-words font-semibold">{item.nome}</h3>
-                        <p className="mt-1 text-xs text-muted-foreground">{item.setor}</p>
-                        <p className="mt-2 text-sm">
-                          {item.qtd.toLocaleString("pt-BR")} × {brl(item.preco)}
-                        </p>
+              <>
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Toque no produto que deseja editar.
+                </p>
+                <ul className="mt-3 space-y-4" aria-label="Produtos comprados">
+                  {Array.from(new Set(compra.produtos.map((i) => i.setor))).map((setor) => (
+                    <li
+                      key={setor}
+                      className="overflow-hidden rounded-2xl border bg-card shadow-soft"
+                    >
+                      <h3 className="bg-emerald-50 px-3 py-3 text-sm font-bold text-emerald-950">
+                        {setor}
+                      </h3>
+                      <div className="grid grid-cols-[minmax(0,1fr)_36px_70px_70px_28px] gap-1 bg-muted/60 px-2 py-2 text-[10px] font-semibold text-muted-foreground">
+                        <span>Produto</span>
+                        <span>Qtd</span>
+                        <span>Preço un.</span>
+                        <span className="text-right">Total</span>
+                        <span />
                       </div>
-                      <strong className="shrink-0 tabular-nums">
-                        {brl(historyItemTotal(item))}
-                      </strong>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                      {compra
+                        .produtos!.filter((i) => i.setor === setor)
+                        .map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => startEditing(item.id)}
+                            aria-label={`Editar ${item.nome}`}
+                            className="grid w-full grid-cols-[minmax(0,1fr)_36px_70px_70px_28px] items-center gap-1 border-t px-2 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                          >
+                            <span className="min-w-0 break-words text-xs font-medium">
+                              {item.nome}
+                            </span>
+                            <span className="text-xs">{item.qtd.toLocaleString("pt-BR")}</span>
+                            <span className="text-xs tabular-nums">{brl(item.preco)}</span>
+                            <strong className="text-right text-[11px] tabular-nums">
+                              {brl(historyItemTotal(item))}
+                            </strong>
+                            <Pencil
+                              className="h-4 w-4 justify-self-center text-primary"
+                              aria-hidden="true"
+                            />
+                          </button>
+                        ))}
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
             <div className="mt-5 flex justify-between rounded-2xl bg-emerald-50 p-4 text-emerald-950">
               <span>Total da compra</span>
@@ -159,109 +191,105 @@ export function PurchaseDetails({
             <Button
               type="button"
               className="mt-4 min-h-12 w-full rounded-2xl"
-              disabled={!compra.produtos?.length}
-              onClick={startEditing}
+              disabled={compra.produtos === undefined}
+              onClick={() => {
+                const id = crypto.randomUUID();
+                startEditing(id);
+                setDrafts((prev) => [
+                  ...prev,
+                  { id, nome: "", setor: "Mercearia", qtd: "1", preco: "" },
+                ]);
+              }}
             >
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar itens
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar produto comprado
             </Button>
           </>
         ) : (
           <form onSubmit={submit}>
             <p className="mt-4 text-sm text-muted-foreground">
-              Corrija os produtos desta compra. A diferença no total será descontada ou devolvida ao
+              Corrija o produto selecionado. A diferença no total será descontada ou devolvida ao
               cartão vinculado.
             </p>
             <div className="mt-4 space-y-4">
-              {drafts.map((item, index) => (
-                <fieldset key={item.id} className="rounded-2xl border bg-card p-4">
-                  <legend className="px-1 text-xs font-semibold">Produto {index + 1}</legend>
-                  <label className="block text-sm">
-                    Nome
-                    <Input
-                      aria-label={`Nome do produto ${index + 1}`}
-                      className="mt-1 min-h-11 text-base"
-                      required
-                      maxLength={200}
-                      value={item.nome}
-                      onChange={(e) => change(item.id, "nome", e.target.value)}
-                    />
-                  </label>
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    <label className="text-sm">
-                      Quantidade
+              {drafts.map((item, index) =>
+                item.id === selectedId ? (
+                  <fieldset key={item.id} className="rounded-2xl border bg-card p-4">
+                    <legend className="px-1 text-xs font-semibold">Produto {index + 1}</legend>
+                    <label className="block text-sm">
+                      Nome
                       <Input
-                        aria-label={`Quantidade do produto ${index + 1}`}
+                        aria-label={`Nome do produto ${index + 1}`}
                         className="mt-1 min-h-11 text-base"
-                        inputMode="decimal"
                         required
-                        value={item.qtd}
-                        onChange={(e) => change(item.id, "qtd", e.target.value)}
+                        maxLength={200}
+                        value={item.nome}
+                        onChange={(e) => change(item.id, "nome", e.target.value)}
                       />
                     </label>
-                    <label className="text-sm">
-                      Preço unitário
-                      <Input
-                        aria-label={`Preço do produto ${index + 1}`}
-                        className="mt-1 min-h-11 text-base"
-                        inputMode="decimal"
-                        required
-                        value={item.preco}
-                        onChange={(e) => change(item.id, "preco", e.target.value)}
-                      />
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <label className="text-sm">
+                        Quantidade
+                        <Input
+                          aria-label={`Quantidade do produto ${index + 1}`}
+                          className="mt-1 min-h-11 text-base"
+                          inputMode="decimal"
+                          required
+                          value={item.qtd}
+                          onChange={(e) => change(item.id, "qtd", e.target.value)}
+                        />
+                      </label>
+                      <label className="text-sm">
+                        Preço unitário
+                        <Input
+                          aria-label={`Preço do produto ${index + 1}`}
+                          className="mt-1 min-h-11 text-base"
+                          inputMode="decimal"
+                          required
+                          value={item.preco}
+                          onChange={(e) => change(item.id, "preco", e.target.value)}
+                        />
+                      </label>
+                    </div>
+                    <label className="mt-3 block text-sm">
+                      Setor
+                      <select
+                        aria-label={`Setor do produto ${index + 1}`}
+                        className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3 text-base"
+                        value={item.setor}
+                        onChange={(e) => change(item.id, "setor", e.target.value)}
+                      >
+                        {Array.from(
+                          new Set([...SETORES, ...drafts.map((i) => i.setor), "Outros"]),
+                        ).map((setor) => (
+                          <option key={setor}>{setor}</option>
+                        ))}
+                      </select>
                     </label>
-                  </div>
-                  <label className="mt-3 block text-sm">
-                    Setor
-                    <select
-                      aria-label={`Setor do produto ${index + 1}`}
-                      className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3 text-base"
-                      value={item.setor}
-                      onChange={(e) => change(item.id, "setor", e.target.value)}
-                    >
-                      {Array.from(
-                        new Set([...SETORES, ...drafts.map((i) => i.setor), "Outros"]),
-                      ).map((setor) => (
-                        <option key={setor}>{setor}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold">
-                      Total:{" "}
-                      {Number.isFinite(parse(item.qtd)) && Number.isFinite(parse(item.preco))
-                        ? brl(historyItemTotal({ qtd: parse(item.qtd), preco: parse(item.preco) }))
-                        : "—"}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={saving}
-                      onClick={() => setDrafts((prev) => prev.filter((i) => i.id !== item.id))}
-                      aria-label={`Remover produto ${index + 1}`}
-                      className="flex min-h-10 items-center gap-1 rounded-xl px-2 text-sm text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Remover
-                    </button>
-                  </div>
-                </fieldset>
-              ))}
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold">
+                        Total:{" "}
+                        {Number.isFinite(parse(item.qtd)) && Number.isFinite(parse(item.preco))
+                          ? brl(
+                              historyItemTotal({ qtd: parse(item.qtd), preco: parse(item.preco) }),
+                            )
+                          : "—"}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => setDrafts((prev) => prev.filter((i) => i.id !== item.id))}
+                        aria-label={`Remover produto ${index + 1}`}
+                        className="flex min-h-10 items-center gap-1 rounded-xl px-2 text-sm text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Remover
+                      </button>
+                    </div>
+                  </fieldset>
+                ) : null,
+              )}
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={saving}
-              className="mt-4 min-h-11 w-full"
-              onClick={() =>
-                setDrafts((prev) => [
-                  ...prev,
-                  { id: crypto.randomUUID(), nome: "", setor: "Mercearia", qtd: "1", preco: "" },
-                ])
-              }
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Adicionar produto comprado
-            </Button>
             <div className="mt-4 rounded-2xl bg-emerald-50 p-4 text-emerald-950">
               <div className="flex justify-between">
                 <span>Novo total</span>
