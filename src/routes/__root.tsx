@@ -9,6 +9,7 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { saveCache } from "@/lib/offline";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -21,7 +22,10 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <p className="mt-2 text-sm text-muted-foreground">Página não encontrada.</p>
-        <Link to="/" className="mt-6 inline-block rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">
+        <Link
+          to="/"
+          className="mt-6 inline-block rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
+        >
           Voltar ao início
         </Link>
       </div>
@@ -61,7 +65,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "language", content: "pt-BR" },
       { property: "og:locale", content: "pt_BR" },
       { title: "Mercado Fácil" },
-      { name: "description", content: "Organize compras de supermercado com cartões de alimentação e vale-compras." },
+      {
+        name: "description",
+        content: "Organize compras de supermercado com cartões de alimentação e vale-compras.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -100,11 +107,25 @@ function RootComponent() {
   const router = useRouter();
   useEffect(() => {
     document.documentElement.lang = "pt-BR";
+    if (import.meta.env.PROD && "serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then(() => navigator.serviceWorker.ready)
+        .then((registration) => {
+          registration.active?.postMessage({
+            type: "CACHE_ASSETS",
+            urls: performance.getEntriesByType("resource").map((entry) => entry.name),
+          });
+        })
+        .catch(() => {});
+    }
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
-      if (event === "SIGNED_OUT") queryClient.clear();
-      else queryClient.invalidateQueries();
+      if (event === "SIGNED_OUT") {
+        saveCache("identity", ["user"], null);
+        queryClient.clear();
+      } else queryClient.invalidateQueries();
     });
     return () => data.subscription.unsubscribe();
   }, [router, queryClient]);

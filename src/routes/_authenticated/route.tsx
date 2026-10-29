@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/AppShell";
+import { cached, saveCache } from "@/lib/offline";
 import { StoreProvider, type Familia } from "@/lib/demo-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,30 +19,72 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function Layout() {
-  const [user, setUser] = useState<{ id: string } | null>(null);
+  const [user, setUser] = useState<{ id: string } | null>(
+    () => cached<{ id: string }>("identity", ["user"]) || null,
+  );
   const [authError, setAuthError] = useState("");
   useEffect(() => {
     let active = true;
     async function iniciar() {
+      if (!navigator.onLine) {
+        const local = cached<{ id: string }>("identity", ["user"]);
+        if (local) {
+          setUser(local);
+          return;
+        }
+        setAuthError("Conecte-se uma primeira vez para preparar este celular.");
+        return;
+      }
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session?.user) {
+        const local = { id: sessionData.session.user.id };
+        saveCache("identity", ["user"], local);
+        if (active) setUser(local);
+        return;
+      }
+      if (cached("identity", ["user"]) && !sessionData.session) return;
       const { data: existing } = await supabase.auth.getUser();
       if (!active) return;
-      if (existing.user) { setUser(existing.user); return; }
+      if (existing.user) {
+        saveCache("identity", ["user"], { id: existing.user.id });
+        setUser(existing.user);
+        return;
+      }
       const { data, error } = await supabase.auth.signInAnonymously();
       if (!active) return;
-      if (error || !data.user) { setAuthError(error?.message || "Não foi possível iniciar."); return; }
+      if (error || !data.user) {
+        setAuthError(error?.message || "Não foi possível iniciar.");
+        return;
+      }
+      saveCache("identity", ["user"], { id: data.user.id });
       setUser(data.user);
     }
     iniciar();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
-  if (authError) return <div className="mx-auto max-w-md p-8 text-center"><h1 className="text-2xl font-bold">Mercado Fácil</h1><p className="mt-4 text-muted-foreground">Não foi possível iniciar automaticamente: {authError}</p><Button className="mt-4" onClick={() => window.location.reload()}>Tentar novamente</Button></div>;
-  if (!user) return <p className="p-10 text-center text-muted-foreground">Preparando seu Mercado Fácil…</p>;
+  if (authError)
+    return (
+      <div className="mx-auto max-w-md p-8 text-center">
+        <h1 className="text-2xl font-bold">Mercado Fácil</h1>
+        <p className="mt-4 text-muted-foreground">
+          Não foi possível iniciar automaticamente: {authError}
+        </p>
+        <Button className="mt-4" onClick={() => window.location.reload()}>
+          Tentar novamente
+        </Button>
+      </div>
+    );
+  if (!user)
+    return <p className="p-10 text-center text-muted-foreground">Preparando seu Mercado Fácil…</p>;
   return <AuthenticatedLayout user={user} />;
 }
 
 function AuthenticatedLayout({ user }: { user: { id: string } }) {
   const famQ = useQuery({
     queryKey: ["familia", user.id],
+    initialData: () => cached<Familia | null>(user.id, ["familia"]),
     queryFn: async (): Promise<Familia | null> => {
       const { data, error } = await supabase
         .from("familia_membros")
@@ -49,11 +92,11 @@ function AuthenticatedLayout({ user }: { user: { id: string } }) {
         .eq("user_id", user.id)
         .maybeSingle();
       if (error) throw error;
-      return (data?.familias as Familia | null) ?? null;
+      return saveCache(user.id, ["familia"], (data?.familias as Familia | null) ?? null);
     },
   });
 
-  if (famQ.isLoading) return <p className="p-10 text-center text-muted-foreground">Carregando…</p>;
+  if (famQ.isPending) return <p className="p-10 text-center text-muted-foreground">Carregando…</p>;
   if (!famQ.data) return <FamiliaSetup userId={user.id} />;
   return (
     <StoreProvider familia={famQ.data}>
@@ -71,11 +114,15 @@ function FamiliaSetup({ userId }: { userId: string }) {
 
   async function rodar(fn: "criar_familia" | "entrar_familia") {
     setBusy(true);
-    const { error } = fn === "criar_familia"
-      ? await supabase.rpc("criar_familia", { _nome: nome })
-      : await supabase.rpc("entrar_familia", { _codigo: codigo });
+    const { error } =
+      fn === "criar_familia"
+        ? await supabase.rpc("criar_familia", { _nome: nome })
+        : await supabase.rpc("entrar_familia", { _codigo: codigo });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     qc.invalidateQueries({ queryKey: ["familia", userId] });
   }
 
@@ -83,21 +130,48 @@ function FamiliaSetup({ userId }: { userId: string }) {
     <div className="mx-auto max-w-md space-y-6 px-5 py-10">
       <div>
         <h1 className="text-3xl font-extrabold">Sua família</h1>
-        <p className="mt-1 text-muted-foreground">Digite o nome da sua família uma única vez neste celular. Todos da família compartilham a lista, os cartões e o histórico.</p>
+        <p className="mt-1 text-muted-foreground">
+          Digite o nome da sua família uma única vez neste celular. Todos da família compartilham a
+          lista, os cartões e o histórico.
+        </p>
       </div>
       <section className="space-y-3 rounded-3xl bg-card p-5 shadow-soft">
         <h2 className="text-lg font-bold">Criar uma família</h2>
         <Label>Nome</Label>
-        <Input className="h-12" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Família Silva" />
-        <Button size="lg" className="h-12 w-full rounded-2xl" disabled={busy} onClick={() => rodar("criar_familia")}>Criar família</Button>
+        <Input
+          className="h-12"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="Ex.: Família Silva"
+        />
+        <Button
+          size="lg"
+          className="h-12 w-full rounded-2xl"
+          disabled={busy}
+          onClick={() => rodar("criar_familia")}
+        >
+          Criar família
+        </Button>
       </section>
       <section className="space-y-3 rounded-3xl bg-card p-5 shadow-soft">
         <h2 className="text-lg font-bold">Entrar na família</h2>
         <Label>Nome da família</Label>
-        <Input className="h-12" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Ex.: Família Teste" />
-        <Button size="lg" variant="outline" className="h-12 w-full rounded-2xl" disabled={busy || !codigo.trim()} onClick={() => rodar("entrar_familia")}>Continuar</Button>
+        <Input
+          className="h-12"
+          value={codigo}
+          onChange={(e) => setCodigo(e.target.value)}
+          placeholder="Ex.: Família Teste"
+        />
+        <Button
+          size="lg"
+          variant="outline"
+          className="h-12 w-full rounded-2xl"
+          disabled={busy || !codigo.trim()}
+          onClick={() => rodar("entrar_familia")}
+        >
+          Continuar
+        </Button>
       </section>
-
     </div>
   );
 }
