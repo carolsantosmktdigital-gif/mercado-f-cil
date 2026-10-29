@@ -553,7 +553,7 @@ function Lista() {
             </button>
             <button
               className={
-                "min-h-12 rounded-xl text-sm font-semibold " +
+                "flex min-h-12 items-center justify-center gap-2 rounded-full text-sm font-semibold " +
                 (aba === "carrinho" ? "bg-primary text-primary-foreground shadow-sm" : "")
               }
               onClick={() => setAba("carrinho")}
