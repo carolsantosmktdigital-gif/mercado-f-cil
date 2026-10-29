@@ -1,6 +1,12 @@
 export const MEALS = ["Café da manhã", "Almoço", "Jantar", "Lanches"] as const;
 export type Meal = (typeof MEALS)[number];
-export type TemplateItem = { nome: string; setor: string; qtd: number; unidade: string };
+export type TemplateItem = {
+  nome: string;
+  setor: string;
+  qtd: number;
+  unidade: string;
+  nomeCompleto?: string;
+};
 export type Preferences = {
   total: number;
   adultos: number;

@@ -81,7 +81,7 @@ function Inicio() {
         </ul>
       </section>
 
-      <ShoppingListBuilder />
+      {!listas.length && <ShoppingListBuilder />}
 
       {(listas.length > 0 || abrirNovaLista) && (
         <section id="nova-lista" className="mt-5 scroll-mt-4 rounded-2xl bg-card p-4 shadow-soft">

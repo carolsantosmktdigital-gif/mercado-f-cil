@@ -1,3 +1,4 @@
+import type { TemplateItem } from "./shopping-templates";
 export type HistoryItem = { id: string; nome: string; setor: string; qtd: number; preco: number };
 export function historyItemTotal(item: Pick<HistoryItem, "qtd" | "preco">) {
   return Math.round((item.qtd * item.preco + Number.EPSILON) * 100) / 100;
@@ -33,4 +34,14 @@ export function validateHistoryPrecision(items: HistoryItem[]) {
     )
   )
     throw new Error("Use até 2 casas decimais no preço e 3 na quantidade.");
+}
+
+export function historyTemplateItems(items: HistoryItem[]): TemplateItem[] {
+  return items.map((item) => ({
+    nome: item.nome,
+    nomeCompleto: item.nome,
+    setor: item.setor,
+    qtd: item.qtd,
+    unidade: "Quantidade da compra anterior",
+  }));
 }

@@ -445,7 +445,6 @@ function Lista() {
       )}
       {listaId && (
         <div className="mb-4">
-          <ShoppingListBuilder />
           <Button
             type="button"
             variant="outline"

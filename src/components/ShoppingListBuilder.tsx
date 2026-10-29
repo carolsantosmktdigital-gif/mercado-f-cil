@@ -1,8 +1,10 @@
+import { historyTemplateItems } from "@/lib/history";
+import { analysisDate } from "@/lib/analysis";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useDemo } from "@/lib/demo-store";
+import { useDemo, type Compra } from "@/lib/demo-store";
 import {
   generateShoppingList,
   MEALS,
@@ -11,7 +13,10 @@ import {
 } from "@/lib/shopping-templates";
 
 export function ShoppingListBuilder() {
-  const { criarLista, cartoes } = useDemo();
+  const { criarLista, cartoes, historico = [] } = useDemo();
+  const lastPurchase = [...historico].sort((a, b) => b.data.localeCompare(a.data))[0];
+  const [source, setSource] = useState<Compra | null>(null);
+  const [declined, setDeclined] = useState(false);
   const [open, setOpen] = useState(false),
     [total, setTotal] = useState(2),
     [adultos, setAdultos] = useState(2),
@@ -41,15 +46,49 @@ export function ShoppingListBuilder() {
   );
   return (
     <section className="mt-5 rounded-2xl bg-card p-4 shadow-soft">
-      <h2 className="font-bold">Lista pronta para sua família</h2>
+      <h2 className="font-bold">
+        {source ? "Reutilizar última compra" : "Lista pronta para sua família"}
+      </h2>
+      {!open && !declined && !!lastPurchase?.produtos?.length && (
+        <div className="mt-3 space-y-3 rounded-xl bg-accent p-3">
+          <p className="font-semibold">Deseja usar a mesma lista da última compra?</p>
+          <p className="text-sm">
+            {lastPurchase.listaNome || "Última compra"} · {analysisDate(lastPurchase.data)}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              disabled={busy}
+              onClick={() => {
+                setSource(lastPurchase);
+                setItems(historyTemplateItems(lastPurchase.produtos!));
+                setNome(lastPurchase.listaNome || "Minha lista de compras");
+                setCartao(
+                  cartoes.some((c) => c.id === lastPurchase.cartaoId) ? lastPurchase.cartaoId! : "",
+                );
+                setBudget("");
+                setRequestId(crypto.randomUUID());
+                setOpen(true);
+              }}
+            >
+              Sim, usar última compra
+            </Button>
+            <Button variant="outline" onClick={() => setDeclined(true)}>
+              Não, criar uma nova
+            </Button>
+          </div>
+        </div>
+      )}
       <p className="mt-1 text-sm text-muted-foreground">
-        Informe as pessoas, o período e as refeições para montar sua lista.
+        {source
+          ? "Confira os produtos da compra anterior antes de criar a nova lista."
+          : "Informe as pessoas, o período e as refeições para montar sua lista."}
       </p>
       <Button
         className="mt-3 w-full"
         disabled={busy}
         onClick={() => {
           setOpen(true);
+          setSource(null);
           setItems(null);
           setNome("Minha lista de compras");
         }}
@@ -128,7 +167,14 @@ export function ShoppingListBuilder() {
                 submitting.current = true;
                 setBusy(true);
                 try {
-                  if (items.some((item) => !Number.isInteger(item.qtd) || item.qtd < 1))
+                  if (
+                    items.some(
+                      (item) =>
+                        !Number.isFinite(item.qtd) ||
+                        item.qtd <= 0 ||
+                        (!source && !Number.isInteger(item.qtd)),
+                    )
+                  )
                     throw new Error("Informe quantidades inteiras, a partir de 1.");
                   const result = await criarLista(
                     nome,
@@ -159,9 +205,9 @@ export function ShoppingListBuilder() {
             >
               <h3 className="font-bold">Revise sua lista · {items.length} produtos</h3>
               <p className="text-sm text-muted-foreground">
-                Quantidades aproximadas para {total} pessoas por {dias} dias. Ajuste ao seu consumo
-                e ao que já tem em casa. Hortifrúti e pães podem ser comprados aos poucos. Preencha
-                o preço por kg, pacote ou unidade indicada durante a compra.
+                {source
+                  ? `Itens e quantidades da compra de ${analysisDate(source.data)}. Confira e ajuste se desejar. Os preços e as marcações do carrinho serão zerados para a nova compra.`
+                  : `Quantidades aproximadas para ${total} pessoas por ${dias} dias. Ajuste ao seu consumo e ao que já tem em casa. Hortifrúti e pães podem ser comprados aos poucos. Preencha o preço por kg, pacote ou unidade indicada durante a compra.`}
               </p>
               <p className="text-sm text-muted-foreground">
                 Itens de bebê podem ser adicionados depois em Crianças.
@@ -175,7 +221,7 @@ export function ShoppingListBuilder() {
                         (item, index) =>
                           item.setor === setor && (
                             <div
-                              key={item.nome}
+                              key={`${item.nome}-${index}`}
                               className="flex items-center gap-2 rounded-xl bg-muted p-2"
                             >
                               <div className="min-w-0 flex-1">
@@ -185,9 +231,9 @@ export function ShoppingListBuilder() {
                               <Input
                                 aria-label={`Quantidade de ${item.nome}`}
                                 type="number"
-                                min="1"
+                                min={source ? "0.001" : "1"}
                                 max="999999"
-                                step="1"
+                                step={source ? "0.001" : "1"}
                                 required
                                 className="w-20"
                                 value={item.qtd}
@@ -252,8 +298,18 @@ export function ShoppingListBuilder() {
                 <Button disabled={!items.length || busy} className="w-full" type="submit">
                   {busy ? "Criando…" : "Criar minha lista"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setItems(null)}>
-                  Alterar respostas
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setItems(null);
+                    if (source) {
+                      setSource(null);
+                      setOpen(false);
+                    }
+                  }}
+                >
+                  {source ? "Voltar às opções" : "Alterar respostas"}
                 </Button>
               </fieldset>
             </form>
