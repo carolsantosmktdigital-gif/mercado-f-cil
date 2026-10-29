@@ -85,7 +85,7 @@ function Inicio() {
         </ul>
       </section>
 
-      {!listas.length && <ShoppingListBuilder />}
+      <ShoppingListBuilder />
 
       <section id="nova-lista" className="mt-5 scroll-mt-4 rounded-2xl bg-card p-4 shadow-soft">
         <div className="flex items-center justify-between gap-2">
