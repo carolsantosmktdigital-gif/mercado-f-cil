@@ -29,9 +29,6 @@ export function BudgetAlert({
         </p>
         <p className="mt-1 font-bold tabular-nums">{amount}</p>
         <p className="mt-1 font-medium">Você tem {percentage}% do orçamento disponível.</p>
-        <p className="mt-2 font-normal">
-          Atenção: resta {level === "danger" ? "20%" : "30%"} ou menos do orçamento.
-        </p>
       </div>
     </div>
   );
