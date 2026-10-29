@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ export function ShoppingListBuilder() {
     [budget, setBudget] = useState(""),
     [busy, setBusy] = useState(false);
   const [requestId, setRequestId] = useState("");
+  const submitting = useRef(false);
   const numeric = (label: string, value: number, change: (n: number) => void, min = 0) => (
     <label className="block text-sm font-medium">
       {label}
@@ -123,11 +124,13 @@ export function ShoppingListBuilder() {
               className="space-y-4"
               onSubmit={async (e) => {
                 e.preventDefault();
+                if (submitting.current) return;
+                submitting.current = true;
                 setBusy(true);
                 try {
                   if (items.some((item) => !Number.isInteger(item.qtd) || item.qtd < 1))
                     throw new Error("Informe quantidades inteiras, a partir de 1.");
-                  await criarLista(
+                  const result = await criarLista(
                     nome,
                     cartao,
                     Number(budget.replace(",", ".")),
@@ -136,7 +139,9 @@ export function ShoppingListBuilder() {
                     requestId,
                   );
                   toast.success(
-                    "Lista personalizada criada. Você pode adicionar outros produtos na lista.",
+                    result === "existing"
+                      ? "Esta lista já existe e foi selecionada. Use Duplicar se quiser uma cópia."
+                      : "Lista personalizada criada. Você pode adicionar outros produtos na lista.",
                   );
                   setOpen(false);
                   setItems(null);
@@ -147,6 +152,7 @@ export function ShoppingListBuilder() {
                       : "Não foi possível criar a lista. Tente novamente.",
                   );
                 } finally {
+                  submitting.current = false;
                   setBusy(false);
                 }
               }}

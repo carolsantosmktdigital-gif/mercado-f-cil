@@ -31,3 +31,25 @@ it("revisa, ajusta e exclui produtos antes de criar somente a nova lista", async
   expect(args[4].find((i: any) => i.nome === "Cereal").setor).toBe("Crianças");
   expect(args[5]).toMatch(/^[a-f0-9-]{36}$/);
 });
+it("ignores repeated submissions while the first creation is pending", async () => {
+  let finish!: () => void;
+  save.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<ShoppingListBuilder />);
+  fireEvent.click(screen.getByRole("button", { name: "Gerar lista automática" }));
+  fireEvent.click(screen.getByRole("button", { name: "Montar lista sugerida" }));
+  fireEvent.change(screen.getByLabelText("Cartão"), { target: { value: "c" } });
+  fireEvent.change(screen.getByLabelText("Orçamento (R$)"), { target: { value: "500" } });
+  const form = screen.getByRole("button", { name: "Criar minha lista" }).closest("form")!;
+  fireEvent.submit(form);
+  fireEvent.submit(form);
+  expect(save).toHaveBeenCalledOnce();
+  finish();
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "Criando…" })).not.toBeInTheDocument(),
+  );
+});

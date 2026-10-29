@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { CreditCard, Plus, Pencil, Trash2 } from "lucide-react";
 import { Page } from "@/components/AppShell";
@@ -45,9 +45,12 @@ function Cartoes() {
   const [nome, setNome] = useState("");
   const [saldo, setSaldo] = useState("");
   const [destinado, setDestinado] = useState("");
+  const savingCard = useRef(false);
+  const [salvandoCadastro, setSalvandoCadastro] = useState(false);
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
+    if (savingCard.current) return;
     const v = parseFloat(saldo.replace(",", "."));
     if (!nome.trim() || isNaN(v)) {
       toast.error("Preencha nome e saldo.");
@@ -58,11 +61,16 @@ function Cartoes() {
       toast.error("O valor destinado deve estar entre zero e o saldo do cartão.");
       return;
     }
+    savingCard.current = true;
+    setSalvandoCadastro(true);
     try {
       await addCartao(nome.trim(), v, d);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível cadastrar.");
       return;
+    } finally {
+      savingCard.current = false;
+      setSalvandoCadastro(false);
     }
     setNome("");
     setSaldo("");
@@ -164,8 +172,13 @@ function Cartoes() {
               Este valor será o orçamento da compra mensal.
             </p>
           </div>
-          <Button type="submit" size="lg" className="h-12 w-full rounded-2xl">
-            Salvar cartão
+          <Button
+            type="submit"
+            disabled={salvandoCadastro}
+            size="lg"
+            className="h-12 w-full rounded-2xl"
+          >
+            {salvandoCadastro ? "Salvando…" : "Salvar cartão"}
           </Button>
         </form>
       )}

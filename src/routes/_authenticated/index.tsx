@@ -1,3 +1,4 @@
+import { DeleteListButton } from "@/components/DeleteListButton";
 import { InstallApp } from "@/components/InstallApp";
 import { DuplicateListButton } from "@/components/DuplicateListButton";
 import { ShoppingListBuilder } from "@/components/ShoppingListBuilder";
@@ -118,6 +119,7 @@ function Inicio() {
                 cartaoId={l.cartao_id}
                 orcamento={l.orcamento}
               />
+              <DeleteListButton id={l.id} nome={l.nome} />
             </div>
           ))}
         </div>

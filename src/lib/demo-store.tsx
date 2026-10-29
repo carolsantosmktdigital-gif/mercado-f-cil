@@ -99,7 +99,8 @@ type Store = {
     reserva: number,
     produtos?: TemplateItem[],
     requestId?: string,
-  ) => Promise<void>;
+  ) => Promise<void | "created" | "existing">;
+  excluirLista: (id: string) => Promise<void>;
   atualizarOrcamento: (valor: number) => Promise<void>;
   duplicarLista: (
     origem: string,
@@ -673,7 +674,7 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       }
       if (produtos) {
         const id = requestId || crypto.randomUUID();
-        const { error } = await db.rpc("criar_lista_personalizada", {
+        const { data: createdId, error } = await db.rpc("criar_lista_personalizada", {
           _id: id,
           _familia: fid,
           _cartao: cartaoId,
@@ -683,8 +684,9 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
         });
         check(error);
         await refresh("listas", "itens");
-        setSelectedId(id);
-        return;
+        setSelectedId(createdId || id);
+        saveCache(fid, ["selected"], createdId || id);
+        return createdId && createdId !== id ? "existing" : "created";
       }
       const { data, error } = await db
         .from("listas_compras")
@@ -702,6 +704,27 @@ export function StoreProvider({ familia, children }: { familia: Familia; childre
       check(error);
       await refresh("listas");
       if (data?.id) setSelectedId(data.id);
+      return "created";
+    },
+    excluirLista: async (id) => {
+      if (!navigator.onLine) throw new Error("Conecte-se à internet para excluir a lista.");
+      await syncPending();
+      if (readLocal(fid).pending.some((op) => op.listaId === id))
+        throw new Error("Resolva as alterações pendentes desta lista antes de excluir.");
+      const { error } = await db.rpc("excluir_lista_compras", { _lista: id });
+      check(error);
+      const remaining = (qc.getQueryData<ListaCompras[]>(["listas", fid]) || []).filter(
+        (l) => l.id !== id,
+      );
+      saveCache(fid, ["listas", fid], remaining);
+      qc.setQueryData(["listas", fid], remaining);
+      saveCache(fid, ["itens", fid, id], []);
+      qc.setQueryData(["itens", fid, id], []);
+      if (listaId === id) {
+        setSelectedId("");
+        saveCache(fid, ["selected"], "");
+      }
+      await refresh("listas", "itens");
     },
     duplicarLista: async (origem, nome, cartaoId, orcamento, requestId, historico = false) => {
       if (!navigator.onLine) throw new Error("Conecte-se à internet para duplicar a lista.");
