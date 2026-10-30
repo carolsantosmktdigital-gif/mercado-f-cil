@@ -24,6 +24,7 @@ export function ShoppingListBuilder() {
     [criancas, setCriancas] = useState(0),
     [dias, setDias] = useState(30);
   const [refeicoes, setRefeicoes] = useState<Meal[]>([...MEALS]);
+  const [refeicoesPorDia, setRefeicoesPorDia] = useState(MEALS.length);
   const [items, setItems] = useState<TemplateItem[] | null>(null);
   const [nome, setNome] = useState(""),
     [cartao, setCartao] = useState(""),
@@ -109,7 +110,16 @@ export function ShoppingListBuilder() {
               onSubmit={(e) => {
                 e.preventDefault();
                 try {
-                  setItems(generateShoppingList({ total, adultos, criancas, dias, refeicoes }));
+                  setItems(
+                    generateShoppingList({
+                      total,
+                      adultos,
+                      criancas,
+                      dias,
+                      refeicoes,
+                      refeicoesPorDia,
+                    }),
+                  );
                   setRequestId(crypto.randomUUID());
                 } catch (error) {
                   toast.error((error as Error).message);
@@ -139,6 +149,18 @@ export function ShoppingListBuilder() {
                   <option value={30}>Um mês</option>
                 </select>
               </label>
+              <div className="space-y-1">
+                {numeric(
+                  "Quantas refeições por dia vocês fazem em casa?",
+                  refeicoesPorDia,
+                  setRefeicoesPorDia,
+                  1,
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Informe de 1 a 6 refeições por dia. Essa quantidade ajuda a ajustar os alimentos
+                  sugeridos na lista.
+                </p>
+              </div>
               <fieldset>
                 <legend className="mb-2 text-sm font-medium">
                   Quais refeições costumam fazer em casa?
@@ -149,11 +171,13 @@ export function ShoppingListBuilder() {
                       <input
                         type="checkbox"
                         checked={refeicoes.includes(m)}
-                        onChange={(e) =>
-                          setRefeicoes((prev) =>
-                            e.target.checked ? [...prev, m] : prev.filter((x) => x !== m),
-                          )
-                        }
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...refeicoes, m]
+                            : refeicoes.filter((x) => x !== m);
+                          setRefeicoes(next);
+                          setRefeicoesPorDia(next.length || 1);
+                        }}
                       />
                       {m}
                     </label>
