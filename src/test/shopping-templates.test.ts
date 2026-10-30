@@ -40,3 +40,22 @@ it("sugere somente quantidades inteiras para todos os períodos e famílias", ()
       expect(list.every((item) => Number.isInteger(item.qtd) && item.qtd >= 1)).toBe(true);
     }
 });
+
+it("ajusta a lista de alimentos pela quantidade de refeições por dia, sem inflar limpeza", () => {
+  const fourMeals = generateShoppingList({ ...base, refeicoesPorDia: 4 });
+  const twoMeals = generateShoppingList({ ...base, refeicoesPorDia: 2 });
+  expect(fourMeals.find((i) => i.nome === "Arroz")?.qtd).toBe(5);
+  expect(twoMeals.find((i) => i.nome === "Arroz")?.qtd).toBe(3);
+  expect(twoMeals.find((i) => i.nome === "Detergente")?.qtd).toBe(2);
+});
+
+it("usa a seleção de refeições como padrão, respeita repetições e valida limites", () => {
+  const breakfastOnly = { ...base, refeicoes: ["Café da manhã"] as (typeof MEALS)[number][] };
+  expect(generateShoppingList(breakfastOnly).find((i) => i.nome === "Café")?.qtd).toBe(2);
+  expect(
+    generateShoppingList({ ...breakfastOnly, refeicoesPorDia: 2 }).find((i) => i.nome === "Café")
+      ?.qtd,
+  ).toBe(4);
+  expect(() => generateShoppingList({ ...base, refeicoesPorDia: 0 })).toThrow();
+  expect(() => generateShoppingList({ ...base, refeicoesPorDia: 7 })).toThrow();
+});
