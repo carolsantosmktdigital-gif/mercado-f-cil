@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronUp,
   ListChecks,
+  Info,
   LayoutGrid,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
@@ -600,6 +601,12 @@ function Lista() {
               <div className="h-px flex-1 bg-border" />
             </div>
           </div>
+          {aba === "lista" && (
+            <p role="note" className="mt-3 flex items-start gap-2 rounded-xl border border-border/60 bg-muted/60 px-3 py-2.5 text-sm text-foreground">
+              <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span>Para excluir um item da lista, altere a quantidade para <strong>0</strong>.</span>
+            </p>
+          )}
           {tabela(visiveis)}
         </div>
       )}
