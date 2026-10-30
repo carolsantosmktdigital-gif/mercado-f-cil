@@ -13,6 +13,8 @@ export type Preferences = {
   criancas: number;
   dias: number;
   refeicoes: Meal[];
+  /** Número de refeições efetivamente feitas em casa por dia (1 a 6). */
+  refeicoesPorDia?: number;
 };
 type Product = [string, string, number, string, Meal[]?];
 // Suggested household quantities for two adults over 30 days; not dietary prescriptions.
@@ -94,6 +96,9 @@ export function generateShoppingList(p: Preferences): TemplateItem[] {
     p.refeicoes.some((m) => !MEALS.includes(m))
   )
     throw new Error("Selecione o período e pelo menos uma refeição.");
+  const refeicoesPorDia = p.refeicoesPorDia ?? p.refeicoes.length;
+  if (!Number.isInteger(refeicoesPorDia) || refeicoesPorDia < 1 || refeicoesPorDia > 6)
+    throw new Error("Informe entre 1 e 6 refeições feitas em casa por dia.");
   const all = [...products];
   if (p.criancas)
     all.push(
@@ -109,7 +114,10 @@ export function generateShoppingList(p: Preferences): TemplateItem[] {
     if (!selected) return [];
     const people =
       setor === "Crianças" ? p.criancas : (meals ? p.adultos + p.criancas * 0.7 : p.total) / 2;
-    const raw = ((base * people * p.dias) / 30) * (meals ? selected / meals.length : 1);
+    const pesoRefeicoes = meals
+      ? (selected / meals.length) * (refeicoesPorDia / p.refeicoes.length)
+      : 1;
+    const raw = ((base * people * p.dias) / 30) * pesoRefeicoes;
     return [
       {
         nome,
