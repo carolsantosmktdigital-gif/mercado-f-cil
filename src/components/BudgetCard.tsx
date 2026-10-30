@@ -1,37 +1,63 @@
-import { AlertTriangle } from "lucide-react";
-import { brl, orcamentoEmAlerta, totalItem, useDemo } from "@/lib/demo-store";
+import { BudgetEditor } from "@/components/BudgetEditor";
+import { budgetState } from "@/lib/budget";
+import { BudgetAlert } from "@/components/BudgetAlert";
+import { brl, totalItem, useDemo } from "@/lib/demo-store";
 
 export function BudgetCard() {
   const { itens, orcamento, cartoes, cartaoCompraId } = useDemo();
   const gasto = itens.filter((i) => i.comprado).reduce((s, i) => s + totalItem(i), 0);
-  const restante = orcamento - gasto;
-  const pct = Math.max(0, Math.min(100, (restante / orcamento) * 100));
-  const alerta = orcamentoEmAlerta(orcamento, gasto);
+  const { remaining, percent, level } = budgetState(orcamento, gasto);
   const cartao = cartoes.find((c) => c.id === cartaoCompraId);
+  const barClass =
+    level === "danger" ? "bg-red-600" : level === "warning" ? "bg-orange-500" : "bg-emerald-800";
 
   return (
-    <section className="rounded-3xl bg-primary p-5 text-primary-foreground shadow-soft">
-      <p className="text-sm opacity-80">Saldo do orçamento · {cartao?.nome}</p>
-      <p className="mt-1 font-display text-4xl font-extrabold">{brl(restante)}</p>
-      <div className="mt-4 h-3 overflow-hidden rounded-full bg-primary-foreground/20">
-        <div className="h-full rounded-full bg-primary-foreground" style={{ width: `${pct}%` }} />
+    <section
+      className={
+        "rounded-3xl bg-emerald-50 px-5 py-4 text-emerald-950 shadow-soft " +
+        (level !== "normal" ? `budget-panel-${level}` : "")
+      }
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold">
+          Orçamento: {orcamento > 0 ? brl(orcamento) : "A definir"}
+        </p>
+        <BudgetEditor />
       </div>
-      <div className="mt-2 flex justify-between text-sm opacity-90">
-        <span>Gasto {brl(gasto)}</span>
-        <span>Orçamento {brl(orcamento)}</span>
-      </div>
-      {/* Espaço reservado para o alerta de 20% */}
-      <div className="mt-4 min-h-12">
-        {alerta ? (
-          <div className="flex items-center gap-2 rounded-2xl bg-warning px-3 py-3 text-sm font-semibold text-warning-foreground">
-            <AlertTriangle className="h-5 w-5" /> Atenção: resta 20% ou menos do orçamento.
+      <p className="mt-2 text-xs">
+        Saldo disponível do cartão:{" "}
+        <strong>{cartao ? brl(cartao.saldo) : "Cartão não vinculado"}</strong>
+      </p>
+      {orcamento > 0 ? (
+        <>
+          <div className="mt-3 h-3 overflow-hidden rounded-full bg-emerald-100">
+            <div
+              className={"h-full rounded-full transition-colors " + barClass}
+              style={{ width: `${100 - percent}%` }}
+            />
           </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-primary-foreground/30 px-3 py-3 text-sm opacity-70">
-            Avisaremos aqui quando restar 20% do orçamento.
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <span>
+              Gasto: <strong>{brl(gasto)}</strong>
+            </span>
+            <span>
+              Restante: <strong>{brl(remaining)}</strong>
+            </span>
           </div>
-        )}
-      </div>
+          {level !== "normal" && (
+            <div className="mt-4">
+              <BudgetAlert level={level} remaining={remaining} budget={orcamento} />
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="mt-3 text-sm">
+          Esta lista ainda não tem orçamento definido. O saldo do cartão continua disponível.
+        </p>
+      )}
+      <p className="mt-3 border-t border-current/20 pt-3 text-xs leading-relaxed">
+        O valor do item só entra no cálculo do orçamento quando você toca no ícone do carrinho.
+      </p>
     </section>
   );
 }

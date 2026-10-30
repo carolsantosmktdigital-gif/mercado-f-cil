@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { CreditCard, Plus } from "lucide-react";
-import { Page, DemoBadge } from "@/components/AppShell";
+import { CreditCard, Plus, Pencil, Trash2 } from "lucide-react";
+import { Page } from "@/components/AppShell";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +13,10 @@ export const Route = createFileRoute("/_authenticated/cartoes")({
   head: () => ({
     meta: [
       { title: "Cartões — Mercado Fácil" },
-      { name: "description", content: "Veja e cadastre seus cartões de alimentação e vale-compras." },
+      {
+        name: "description",
+        content: "Veja e cadastre seus cartões de alimentação e vale-compras.",
+      },
       { property: "og:title", content: "Cartões — Mercado Fácil" },
       { property: "og:description", content: "Cartões de alimentação com saldos independentes." },
     ],
@@ -27,41 +31,314 @@ const estilo: Record<Cartao["cor"], string> = {
 };
 
 function Cartoes() {
-  const { cartoes, addCartao } = useDemo();
+  const { familia, cartoes, listas, addCartao, salvarCartao, excluirCartao } = useDemo();
   const [aberto, setAberto] = useState(false);
+  const [excluindo, setExcluindo] = useState<string | null>(null);
+  const [listasVinculadas, setListasVinculadas] = useState<string[]>([]);
+  const [consultandoVinculos, setConsultandoVinculos] = useState(false);
+  const [salvandoExclusao, setSalvandoExclusao] = useState(false);
+  const [editando, setEditando] = useState<Cartao | null>(null);
+  const [novoSaldo, setNovoSaldo] = useState("");
+  const [novoDestinado, setNovoDestinado] = useState("");
+  const [novoNome, setNovoNome] = useState("");
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   const [nome, setNome] = useState("");
   const [saldo, setSaldo] = useState("");
+  const savingCard = useRef(false);
+  const [salvandoCadastro, setSalvandoCadastro] = useState(false);
 
-  function salvar(e: React.FormEvent) {
+  async function salvar(e: React.FormEvent) {
     e.preventDefault();
+    if (savingCard.current) return;
     const v = parseFloat(saldo.replace(",", "."));
-    if (!nome.trim() || isNaN(v)) { toast.error("Preencha nome e saldo."); return; }
-    addCartao(nome.trim(), v);
-    setNome(""); setSaldo(""); setAberto(false);
-    toast.success("Cartão adicionado (demonstração).");
+    if (!nome.trim() || isNaN(v)) {
+      toast.error("Preencha nome e saldo.");
+      return;
+    }
+    savingCard.current = true;
+    setSalvandoCadastro(true);
+    try {
+      await addCartao(nome.trim(), v);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível cadastrar.");
+      return;
+    } finally {
+      savingCard.current = false;
+      setSalvandoCadastro(false);
+    }
+    setNome("");
+    setSaldo("");
+    setAberto(false);
+    toast.success("Cartão salvo.");
+  }
+
+  const listasDoCartao = listas.filter(
+    (lista) => lista.cartao_id === editando?.id && lista.tipo === "normal",
+  );
+
+  async function salvarEdicao(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editando) return;
+    const valor = Number(novoSaldo.trim().replace(",", "."));
+    const d =
+      listasDoCartao.length === 1 ? Number(novoDestinado.trim().replace(",", ".")) : undefined;
+    if (
+      !novoNome.trim() ||
+      !Number.isFinite(valor) ||
+      valor < 0 ||
+      (d !== undefined && (!Number.isFinite(d) || d < 0 || d > valor))
+    ) {
+      toast.error("O valor destinado às compras não pode ultrapassar o saldo.");
+      return;
+    }
+    setSalvandoEdicao(true);
+    try {
+      await salvarCartao(editando.id, novoNome, valor, d);
+      toast.success(d === undefined ? "Cartão atualizado." : "Cartão e orçamento atualizados.");
+      setEditando(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível atualizar o cartão.");
+    } finally {
+      setSalvandoEdicao(false);
+    }
   }
 
   return (
     <Page
       title="Cartões"
       subtitle={`${cartoes.length} cadastrados`}
-      action={<Button size="icon" className="h-12 w-12 rounded-full" onClick={() => setAberto(!aberto)} aria-label="Novo cartão"><Plus className="h-6 w-6" /></Button>}
+      action={
+        <Button
+          size="icon"
+          className="h-12 w-12 rounded-full"
+          onClick={() => setAberto(!aberto)}
+          aria-label="Novo cartão"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      }
     >
-      <DemoBadge texto="Cartões ainda são fictícios — não são salvos." />
-      {aberto && (
+      {cartoes.length === 0 && (
+        <div className="mb-4 rounded-2xl bg-accent p-4">
+          <h2 className="font-bold">Cadastre seu cartão</h2>
+          <p className="mt-2 text-sm">
+            Você ainda não tem cartões cadastrados. Preencha abaixo o nome do cartão, o saldo
+            disponível. Depois, escolha criar uma lista ou gerar uma lista automática.
+          </p>
+        </div>
+      )}
+      {(aberto || cartoes.length === 0) && (
         <form onSubmit={salvar} className="mb-6 space-y-4 rounded-3xl bg-card p-5 shadow-soft">
           <h2 className="text-lg font-bold">Novo cartão</h2>
-          <div className="space-y-1"><Label>Nome do cartão</Label><Input className="h-12" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Vale-alimentação" /></div>
-          <div className="space-y-1"><Label>Saldo disponível (R$)</Label><Input className="h-12" inputMode="decimal" value={saldo} onChange={(e) => setSaldo(e.target.value)} placeholder="0,00" /></div>
-          <Button type="submit" size="lg" className="h-12 w-full rounded-2xl">Salvar cartão</Button>
+          <div className="space-y-1">
+            <Label htmlFor="cartao-nome">Nome do cartão</Label>
+            <Input
+              className="h-12"
+              id="cartao-nome"
+              required
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex.: Vale-alimentação"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="cartao-saldo">Saldo disponível (R$)</Label>
+            <Input
+              className="h-12"
+              inputMode="decimal"
+              id="cartao-saldo"
+              required
+              value={saldo}
+              onChange={(e) => setSaldo(e.target.value)}
+              placeholder="0,00"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            O orçamento será definido quando você criar sua lista. Cadastrar o cartão não cria uma
+            lista.
+          </p>
+          <Button
+            type="submit"
+            disabled={salvandoCadastro}
+            size="lg"
+            className="h-12 w-full rounded-2xl"
+          >
+            {salvandoCadastro ? "Salvando…" : "Salvar cartão"}
+          </Button>
         </form>
+      )}
+      {editando && (
+        <form
+          onSubmit={salvarEdicao}
+          className="mb-5 space-y-3 rounded-3xl border bg-card p-5 shadow-soft"
+        >
+          <h2 className="font-bold">Editar cartão</h2>
+          <Label>Nome do cartão</Label>
+          <Input
+            className="h-12"
+            value={novoNome}
+            onChange={(e) => setNovoNome(e.target.value)}
+            required
+          />
+          <Label>Saldo disponível (R$)</Label>
+          <Input
+            className="h-12"
+            inputMode="decimal"
+            value={novoSaldo}
+            onFocus={(e) => e.currentTarget.select()}
+            onChange={(e) => setNovoSaldo(e.target.value)}
+            required
+          />
+          {listasDoCartao.length === 1 && (
+            <>
+              <Label>Valor destinado às compras (R$)</Label>
+              <Input
+                className="h-12"
+                inputMode="decimal"
+                value={novoDestinado}
+                onFocus={(e) => e.currentTarget.select()}
+                onChange={(e) => setNovoDestinado(e.target.value)}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Orçamento da lista {listasDoCartao[0]?.nome}.
+              </p>
+            </>
+          )}
+          <div className="flex gap-2">
+            <Button type="submit" disabled={salvandoEdicao} className="flex-1">
+              Salvar alterações
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setEditando(null)}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      )}
+      {excluindo &&
+        (() => {
+          const cartao = cartoes.find((c) => c.id === excluindo);
+          if (!cartao) return null;
+          return (
+            <div className="mb-5 rounded-3xl border border-red-200 bg-card p-5 shadow-soft">
+              <h2 className="text-lg font-bold">Excluir cartão?</h2>
+              {consultandoVinculos ? (
+                <p className="mt-2 text-sm">Consultando listas vinculadas...</p>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {listasVinculadas.length > 0 ? (
+                    <>
+                      Este cartão está vinculado{" "}
+                      {listasVinculadas.length === 1 ? "à lista" : "às listas"}{" "}
+                      <strong>{listasVinculadas.join(", ")}</strong> da família{" "}
+                      <strong>{familia.nome}</strong>. Você deseja ainda assim excluir este cartão?
+                    </>
+                  ) : (
+                    <>
+                      Deseja excluir <strong>{cartao.nome}</strong> ({brl(cartao.saldo)}) da família{" "}
+                      <strong>{familia.nome}</strong>?
+                    </>
+                  )}
+                  <span className="mt-2 block">
+                    O cartão deixará de aparecer, mas as listas e o histórico de compras serão
+                    preservados.
+                  </span>
+                </p>
+              )}
+              <div className="mt-4 flex gap-2">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="flex-1"
+                  disabled={consultandoVinculos || salvandoExclusao}
+                  onClick={async () => {
+                    setSalvandoExclusao(true);
+                    try {
+                      await excluirCartao(cartao.id);
+                      toast.success("Cartão excluído da visualização. Listas preservadas.");
+                      setExcluindo(null);
+                      if (editando?.id === cartao.id) setEditando(null);
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Não foi possível excluir o cartão.",
+                      );
+                    } finally {
+                      setSalvandoExclusao(false);
+                    }
+                  }}
+                >
+                  {salvandoExclusao ? "Excluindo..." : "Sim, excluir cartão"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setExcluindo(null)}>
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
+      {cartoes.length > 0 && listas.length === 0 && (
+        <section className="mb-5 space-y-3 rounded-3xl bg-card p-5 shadow-soft">
+          <h2 className="font-bold">Como deseja criar sua lista?</h2>
+          <p className="text-sm text-muted-foreground">
+            Seu cartão está cadastrado. Escolha uma opção para começar.
+          </p>
+          <Button asChild>
+            <Link to="/lista">Escolher como criar minha lista</Link>
+          </Button>
+        </section>
       )}
       <ul className="space-y-4">
         {cartoes.map((c) => (
           <li key={c.id} className={`rounded-3xl p-5 shadow-soft ${estilo[c.cor]}`}>
             <div className="flex items-center justify-between">
               <span className="font-semibold">{c.nome}</span>
-              <CreditCard className="h-6 w-6 opacity-80" />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg p-2"
+                  aria-label={"Editar saldo de " + c.nome}
+                  onClick={() => {
+                    setEditando(c);
+                    setNovoNome(c.nome);
+                    setNovoSaldo(String(c.saldo));
+                    setNovoDestinado(
+                      String(
+                        listas.find((l) => l.cartao_id === c.id && l.tipo === "normal")
+                          ?.orcamento || 0,
+                      ),
+                    );
+                  }}
+                >
+                  <Pencil className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg p-2"
+                  aria-label={"Excluir cartão " + c.nome}
+                  onClick={async () => {
+                    setExcluindo(c.id);
+                    setListasVinculadas([]);
+                    setConsultandoVinculos(true);
+                    const { data, error } = await (supabase as any)
+                      .from("listas_compras")
+                      .select("nome")
+                      .eq("familia_id", familia.id)
+                      .eq("cartao_id", c.id);
+                    setConsultandoVinculos(false);
+                    if (error) {
+                      toast.error("Não foi possível consultar as listas vinculadas.");
+                      setExcluindo(null);
+                      return;
+                    }
+                    setListasVinculadas((data || []).map((l: { nome: string }) => l.nome));
+                  }}
+                >
+                  <Trash2 className="h-5 w-5" />
+                </button>
+                <CreditCard className="h-6 w-6 opacity-80" />
+              </div>
             </div>
             <p className="mt-6 text-sm opacity-75">Saldo disponível</p>
             <p className="font-display text-3xl font-extrabold">{brl(c.saldo)}</p>

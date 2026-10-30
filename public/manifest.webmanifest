@@ -1,0 +1,6 @@
+{
+ "id":"/", "name":"Mercado Fácil", "short_name":"Mercado Fácil", "lang":"pt-BR",
+ "description":"Organize suas listas de compras e acompanhe seu orçamento.",
+ "start_url":"/", "scope":"/", "display":"standalone", "background_color":"#ffffff", "theme_color":"#167249",
+ "icons":[{"src":"/icons/app-192.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"/icons/app-512.png","sizes":"512x512","type":"image/png","purpose":"any"}]
+}

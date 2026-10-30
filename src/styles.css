@@ -62,15 +62,145 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
+  * {
+    border-color: var(--color-border);
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
   }
-  h1, h2, h3 { font-family: var(--font-display); }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+  }
 }
 
 @utility shadow-soft {
   box-shadow: var(--shadow-soft);
+}
+
+/* The same semantic palette is shared by pages, dialogs, inputs and navigation. */
+.dark {
+  --background: oklch(0.17 0.015 150);
+  --foreground: oklch(0.94 0.012 150);
+  --card: oklch(0.22 0.018 150);
+  --card-foreground: oklch(0.94 0.012 150);
+  --popover: oklch(0.24 0.018 150);
+  --popover-foreground: oklch(0.94 0.012 150);
+  --primary: oklch(0.76 0.14 150);
+  --primary-foreground: oklch(0.18 0.04 150);
+  --secondary: oklch(0.3 0.03 150);
+  --secondary-foreground: oklch(0.94 0.012 150);
+  --muted: oklch(0.27 0.018 150);
+  --muted-foreground: oklch(0.75 0.02 150);
+  --accent: oklch(0.3 0.05 150);
+  --accent-foreground: oklch(0.91 0.06 150);
+  --destructive: oklch(0.72 0.18 25);
+  --destructive-foreground: oklch(0.17 0.02 25);
+  --warning: oklch(0.8 0.14 75);
+  --warning-foreground: oklch(0.2 0.03 60);
+  --border: oklch(0.37 0.025 150);
+  --input: oklch(0.37 0.025 150);
+  --ring: oklch(0.76 0.14 150);
+  --shadow-soft: 0 12px 30px -14px rgb(0 0 0 / 0.6);
+}
+
+/* Status colors retain their meaning and contrast in both themes. */
+@layer utilities {
+  .dark :is(.bg-emerald-50, .bg-emerald-100) {
+    background-color: #14382c;
+  }
+  .dark :is(.text-emerald-800, .text-emerald-900, .text-emerald-950) {
+    color: #a7f3d0;
+  }
+  .dark .border-emerald-200 {
+    border-color: #27684c;
+  }
+  .dark :is(.bg-orange-50, .bg-amber-50) {
+    background-color: #422b17;
+  }
+  .dark
+    :is(
+      .text-orange-700,
+      .text-orange-800,
+      .text-orange-950,
+      .text-amber-800,
+      .text-amber-900,
+      .text-amber-950
+    ) {
+    color: #fed7aa;
+  }
+  .dark .border-orange-300 {
+    border-color: #a65d21;
+  }
+  .dark .bg-red-50 {
+    background-color: #451f25;
+  }
+  .dark :is(.text-red-700, .text-red-800) {
+    color: #fecaca;
+  }
+  .dark .border-red-200 {
+    border-color: #93414b;
+  }
+  .dark .bg-slate-100 {
+    background-color: #283440;
+  }
+  .dark .text-slate-700 {
+    color: #d3dce7;
+  }
+}
+
+/* Full-card warnings retain strong contrast in both themes. */
+@layer utilities {
+  .budget-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 0 0;
+    border-top: 1px solid currentColor;
+  }
+  .budget-panel-danger,
+  .dark .budget-panel-danger {
+    background-color: #991b1b;
+    color: #fff;
+    border: 2px solid #f87171;
+    box-shadow: 0 4px 16px rgb(185 28 28 / 0.3);
+  }
+  .budget-panel-warning,
+  .dark .budget-panel-warning {
+    background-color: #ffb347;
+    color: #3d1c00;
+    border: 2px solid #d97706;
+    box-shadow: 0 4px 16px rgb(217 119 6 / 0.25);
+  }
+  .budget-panel-danger :is(.bg-red-500, .bg-red-600) {
+    background-color: #fca5a5;
+  }
+  .budget-panel-warning :is(.bg-orange-400, .bg-orange-500) {
+    background-color: #9a3412;
+  }
+}
+
+/* Fixed contrast for the budget editor in light/dark mode, even in highlighted panels. */
+@layer utilities {
+  .budget-edit-button {
+    background-color: #fff;
+    color: #000;
+    border-color: #000;
+  }
+  .budget-edit-button:hover {
+    background-color: #f4f4f5;
+    color: #000;
+  }
+  .dark .budget-edit-button {
+    background-color: #000;
+    color: #fff;
+    border-color: #fff;
+  }
+  .dark .budget-edit-button:hover {
+    background-color: #18181b;
+    color: #fff;
+  }
 }
