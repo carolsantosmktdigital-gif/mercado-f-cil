@@ -32,13 +32,13 @@ export function ShoppingListBuilder() {
     [busy, setBusy] = useState(false);
   const [requestId, setRequestId] = useState("");
   const submitting = useRef(false);
-  const numeric = (label: string, value: number, change: (n: number) => void, min = 0) => (
+  const numeric = (label: string, value: number, change: (n: number) => void, min = 0, max = 100) => (
     <label className="block text-sm font-medium">
       {label}
       <Input
         type="number"
         min={min}
-        max={100}
+        max={max}
         step="1"
         required
         value={value}
@@ -155,6 +155,7 @@ export function ShoppingListBuilder() {
                   refeicoesPorDia,
                   setRefeicoesPorDia,
                   1,
+                  6,
                 )}
                 <p className="text-xs text-muted-foreground">
                   Informe de 1 a 6 refeições por dia. Essa quantidade ajuda a ajustar os alimentos
